@@ -43,6 +43,31 @@ export const createAnalysisJob = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     await ownedSession(ctx, args.sessionId, user._id);
+    const existingReport = await ctx.db
+      .query("analysisReports")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+    if (existingReport) {
+      const existingJob = await ctx.db.get(existingReport.jobId);
+      if (existingJob && existingJob.userId === user._id) return jobSummary(existingJob);
+    }
+    const existingJob = await ctx.db
+      .query("analysisJobs")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("status"), "queued"),
+          q.eq(q.field("status"), "parsing"),
+          q.eq(q.field("status"), "redacting"),
+          q.eq(q.field("status"), "normalizing"),
+          q.eq(q.field("status"), "analyzing"),
+          q.eq(q.field("status"), "scoring"),
+          q.eq(q.field("status"), "generating-report"),
+          q.eq(q.field("status"), "completed"),
+        ),
+      )
+      .first();
+    if (existingJob) return jobSummary(existingJob);
     const now = Date.now();
     const id = await ctx.db.insert("analysisJobs", {
       userId: user._id,

@@ -88,6 +88,11 @@
   const candidateText = $derived(parsed ? normalizedTextFromCandidate(parsed) : text);
   const preview = $derived(redactText(candidateText));
 
+  function markImportChanged() {
+    reviewed = false;
+    selectedCandidateId = "";
+  }
+
   async function readFile(event: Event) {
     const input = event.currentTarget as HTMLInputElement;
     const selectedFiles = [...(input.files ?? [])];
@@ -98,7 +103,12 @@
       size: file.size,
       lastModified: file.lastModified,
     })));
-    selectedCandidateId = "";
+    markImportChanged();
+  }
+
+  function updateText(event: Event) {
+    text = (event.currentTarget as HTMLTextAreaElement).value;
+    markImportChanged();
   }
 
   function redactOptional(value: string | undefined) {
@@ -246,14 +256,14 @@
               </div>
             {/if}
             <div class="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><ClipboardPaste class="size-3.5" />Paste transcript</div>
-            <textarea bind:value={text} class="h-64 w-full resize-none rounded-lg border border-border bg-background p-4 font-mono text-xs leading-6 outline-none focus:border-signal-accent" placeholder="User: …&#10;Assistant: …"></textarea>
+            <textarea value={text} oninput={updateText} class="h-64 w-full resize-none rounded-lg border border-border bg-background p-4 font-mono text-xs leading-6 outline-none focus:border-signal-accent" placeholder="User: …&#10;Assistant: …"></textarea>
           </div>
         </div>
       {:else if step === 3}
         <h2 class="text-lg font-medium">{candidates.length} session{candidates.length === 1 ? "" : "s"} detected</h2><p class="mt-1 text-sm text-muted-foreground">Choose a parser candidate before redaction.</p>
         <div class="mt-7 space-y-3">
           {#each candidates as candidate}
-            <button onclick={() => (selectedCandidateId = candidate.id)} class="w-full rounded-lg border p-4 text-left transition-colors {(parsed?.id ?? "") === candidate.id ? 'border-signal-accent bg-signal-accent/[0.06]' : 'border-border hover:bg-accent'}">
+            <button onclick={() => { selectedCandidateId = candidate.id; reviewed = false; }} class="w-full rounded-lg border p-4 text-left transition-colors {(parsed?.id ?? "") === candidate.id ? 'border-signal-accent bg-signal-accent/[0.06]' : 'border-border hover:bg-accent'}">
               <p class="truncate text-sm font-medium">{candidate.title}</p>
               <p class="mt-1 font-mono text-[11px] text-muted-foreground">{candidate.messages.length} messages · {candidate.toolEvents.length} tool events · {candidate.confidence} confidence · {candidate.source}</p>
               <div class="mt-3 flex flex-wrap gap-2">{#each candidate.warnings as warning}<span class="rounded border border-signal-warning/20 bg-signal-warning/[0.06] px-2 py-1 text-[11px] text-signal-warning">{warning}</span>{/each}</div>

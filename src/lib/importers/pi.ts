@@ -22,6 +22,9 @@ export const parsePi: SourceParser = (input) =>
     let activeModel: string | undefined;
     let hasBranching = false;
     let hasHeader = false;
+    const rowIds = new Set(
+      rows.map((row) => asRecord(row)?.id).filter((id): id is string => typeof id === "string"),
+    );
     rows.forEach((row) => {
       const item = asRecord(row);
       if (!item) return;
@@ -31,7 +34,7 @@ export const parsePi: SourceParser = (input) =>
       }
       if (item.type === "model_change")
         activeModel = typeof item.modelId === "string" ? item.modelId : undefined;
-      if (item.parentId && item.parentId !== rows[0]) hasBranching = true;
+      if (typeof item.parentId === "string" && !rowIds.has(item.parentId)) hasBranching = true;
       if (item.type === "message" || item.type === "custom_message") {
         if (item.type === "custom_message" && item.display === false) return;
         const payload = asRecord(item.message) ?? item;
