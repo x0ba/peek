@@ -8,16 +8,16 @@
   import { clerkAppearance } from "$lib/auth/clerk-appearance";
   import ConvexClerk from "$lib/components/app/convex-clerk.svelte";
 
-  let { children } = $props();
+  let { children, data } = $props();
 
   // Single Convex client for the app; the auth bridge below feeds it Clerk tokens.
-  // ClerkProvider reads its SSR initialState from page data (see +layout.server.ts).
   setupConvex(env.PUBLIC_CONVEX_URL);
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
 <ClerkProvider
+  initialState={data.initialState}
   signInUrl="/sign-in"
   signUpUrl="/sign-up"
   afterSignOutUrl="/"
