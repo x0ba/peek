@@ -240,7 +240,13 @@ export const deleteSession = mutation({
     const user = await requireUser(ctx);
     const doc = await ctx.db.get(args.sessionId);
     if (!doc || doc.userId !== user._id) throw new Error("Session not found.");
-    await ctx.db.patch(args.sessionId, { deletedAt: Date.now() });
+    const deletedAt = Date.now();
+    await ctx.db.patch(args.sessionId, { deletedAt });
+    const reports = await ctx.db
+      .query("analysisReports")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .take(100);
+    for (const report of reports) await ctx.db.patch(report._id, { deletedAt });
     if (doc.normalizedTraceFileId) await ctx.storage.delete(doc.normalizedTraceFileId);
     return { deleted: true };
   },

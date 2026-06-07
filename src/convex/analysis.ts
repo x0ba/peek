@@ -161,7 +161,10 @@ export const getDashboardStats = query({
       .take(100);
     const sourceCounts: Record<string, number> = {};
     for (const s of sessions) sourceCounts[s.source] = (sourceCounts[s.source] ?? 0) + 1;
-    const scores = reports.filter((r) => !r.deletedAt).map((r) => r.overallScore);
+    const activeSessionIds = new Set(sessions.map((session) => session._id));
+    const scores = reports
+      .filter((report) => !report.deletedAt && activeSessionIds.has(report.sessionId))
+      .map((report) => report.overallScore);
     return {
       totalSessions: sessions.length,
       analyzedSessions: scores.length,
@@ -228,7 +231,7 @@ export const completeJobWithReport = internalMutation({
     if (!job) throw new Error("Job not found");
     if (job.status === "completed") return;
     const session = await ctx.db.get(job.sessionId);
-    if (!session) throw new Error("Session not found");
+    if (!session || session.deletedAt) throw new Error("Session not found");
     const score =
       session.dataCompleteness.confidence === "high"
         ? 4.2
