@@ -38,8 +38,9 @@ function jsonMessages(text: string) {
   const arrays = [parsed, ...(root ? Object.values(root) : [])].filter(
     Array.isArray,
   ) as unknown[][];
+  let messageIndex = 0;
   return arrays.flatMap((array) =>
-    array.flatMap((value, index) => {
+    array.flatMap((value) => {
       const item = asRecord(value);
       const content = item
         ? extractTextContent(item.content ?? item.text ?? item.prompt ?? item.message)
@@ -47,7 +48,7 @@ function jsonMessages(text: string) {
       return item && content.trim()
         ? [
             {
-              id: makeMessageId("cursor_json", index),
+              id: makeMessageId("cursor_json", messageIndex++),
               role: roleFrom(item.role ?? item.speaker ?? (item.prompt ? "user" : undefined)),
               content,
               timestamp: typeof item.timestamp === "string" ? item.timestamp : undefined,

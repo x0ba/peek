@@ -216,6 +216,7 @@ export const completeJobWithReport = internalMutation({
   handler: async (ctx, args) => {
     const job = await ctx.db.get(args.jobId);
     if (!job) throw new Error("Job not found");
+    if (job.status === "completed") return;
     const session = await ctx.db.get(job.sessionId);
     if (!session) throw new Error("Session not found");
     const score =
