@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ArrowRight, Bot, Check, FileSearch, LockKeyhole, Radar, ShieldCheck, Terminal } from "@lucide/svelte";
+  import { Show } from "svelte-clerk";
   import Logo from "$lib/components/app/logo.svelte";
 </script>
 
@@ -8,10 +9,16 @@
 <div class="dark min-h-screen overflow-hidden bg-background text-foreground">
   <header class="relative z-10 mx-auto flex h-20 max-w-[1180px] items-center px-5">
     <Logo />
-    <nav class="ml-auto hidden items-center gap-7 text-sm text-muted-foreground sm:flex">
-      <a href="#workflow" class="hover:text-foreground">Workflow</a>
-      <a href="#privacy" class="hover:text-foreground">Privacy</a>
-      <a href="/dashboard" class="rounded-md border border-border px-3 py-2 text-foreground hover:bg-accent">Open dashboard</a>
+    <nav class="ml-auto flex items-center gap-5 text-sm text-muted-foreground sm:gap-7">
+      <a href="#workflow" class="hidden hover:text-foreground sm:block">Workflow</a>
+      <a href="#privacy" class="hidden hover:text-foreground sm:block">Privacy</a>
+      <Show when="signed-in">
+        <a href="/dashboard" class="rounded-md border border-border px-3 py-2 text-foreground hover:bg-accent">Open dashboard</a>
+        {#snippet fallback()}
+          <a href="/sign-in" class="hover:text-foreground">Sign in</a>
+          <a href="/sign-up" class="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground hover:opacity-90">Get started</a>
+        {/snippet}
+      </Show>
     </nav>
   </header>
 

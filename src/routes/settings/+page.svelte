@@ -1,6 +1,22 @@
 <script lang="ts">
   import { KeyRound, ShieldCheck, Trash2, UserRound } from "@lucide/svelte";
+  import { useClerkContext } from "svelte-clerk";
   import Shell from "$lib/components/app/shell.svelte";
+
+  const ctx = useClerkContext();
+  const name = $derived(ctx.user?.fullName ?? ctx.user?.firstName ?? "Your account");
+  const email = $derived(ctx.user?.primaryEmailAddress?.emailAddress ?? "");
+  const imageUrl = $derived(ctx.user?.imageUrl ?? "");
+  const initials = $derived(
+    ((ctx.user?.firstName?.[0] ?? "") + (ctx.user?.lastName?.[0] ?? "") || name.slice(0, 2))
+      .toUpperCase()
+      .slice(0, 2),
+  );
+  const provider = $derived(
+    ctx.user?.externalAccounts?.[0]?.provider?.replace(/^oauth_/, "") ?? "email",
+  );
+
+  const openProfile = () => ctx.clerk?.openUserProfile();
 
   const privacy = [
     ["Client-side first", "Secrets are detected and replaced in your browser before anything is uploaded."],
@@ -26,12 +42,16 @@
           <p class="mt-1.5 text-xs leading-5 text-muted-foreground">Profile and authentication.</p>
         </div>
         <div class="flex flex-wrap items-center gap-4">
-          <span class="flex size-11 items-center justify-center rounded-full bg-secondary text-xs font-semibold ring-1 ring-border">DX</span>
+          {#if imageUrl}
+            <img src={imageUrl} alt={name} class="size-11 rounded-full object-cover ring-1 ring-border" />
+          {:else}
+            <span class="flex size-11 items-center justify-center rounded-full bg-secondary text-xs font-semibold ring-1 ring-border">{initials}</span>
+          {/if}
           <div class="min-w-0">
-            <p class="text-sm font-medium">Daniel Xu</p>
-            <p class="text-xs text-muted-foreground">daniel@example.com · GitHub</p>
+            <p class="text-sm font-medium">{name}</p>
+            <p class="truncate text-xs text-muted-foreground">{email}{email && provider ? " · " : ""}{provider}</p>
           </div>
-          <button class="ml-auto rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent">Manage with Clerk</button>
+          <button onclick={openProfile} class="ml-auto rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent">Manage with Clerk</button>
         </div>
       </div>
     </section>

@@ -23,7 +23,7 @@
 <svelte:head><title>{session.title} · Peek</title></svelte:head>
 <Shell>
   <div class="peek-rise space-y-8">
-    <a href="/dashboard" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"><ArrowLeft class="size-3.5" />All sessions</a>
+    <a href="/sessions" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"><ArrowLeft class="size-3.5" />All sessions</a>
 
     <!-- Title row -->
     <div class="flex flex-wrap items-start justify-between gap-5">

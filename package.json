@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "convex": "^1.40.0",
-    "convex-svelte": "^0.0.12"
+    "convex-svelte": "^0.0.12",
+    "svelte-clerk": "^1.1.9"
   },
   "devDependencies": {
     "@fontsource-variable/geist": "^5.2.9",

@@ -1,0 +1,151 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Clerk theming — Peek flat dark surface
+   ----------------------------------------------------------------------------
+   Clerk's hosted components (SignIn / SignUp / UserButton) are rendered by
+   clerk-js, loaded unpinned from Clerk's CDN. We theme them the *documented,
+   version-stable* way: Clerk's native CSS-variable API (`--clerk-color-*`,
+   `--clerk-font-*`, …), which maps 1:1 to the `appearance.variables` keys and
+   is read directly by the live renderer regardless of which @clerk/* types we
+   have pinned. This replaces the old wall of `!important` overrides on internal
+   `.cl-*` classes, which drifted out of sync with the renderer.
+
+   Two things make this actually land where the old approach looked broken:
+
+     1. `color-scheme: dark` — Clerk's default theme renders in LIGHT mode
+        unless a dark color-scheme is set. Without it, every surface we didn't
+        explicitly override (native controls, dropdowns, OTP inputs, autofill,
+        skeletons) leaked light-mode onto our black canvas. This was the wonk.
+
+     2. hex, not oklch — Clerk derives hover/active/border shades from these
+        base colors, and its docs warn that modern color functions may not
+        resolve in the variables system. So we feed concrete hex equivalents of
+        the layout.css design tokens.
+
+   Design intent (see peek-flat-design-system): the form sits FLAT on the black
+   canvas — no Clerk card frame, no duplicate header (AuthScreen supplies the
+   title), one elevation level. The few rules below the variable block cover
+   only what variables can't express.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* ── Theme contract: Clerk's native variable API ─────────────────────────────
+   Scoped to Clerk's root containers (sign-in/up form + UserButton popover +
+   any modal) so it never bleeds into the app. Hex values mirror the .dark
+   tokens in layout.css. */
+:where(.cl-rootBox, .cl-userButtonPopoverRootBox, .cl-userButtonPopoverCard, .cl-modalContent) {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --clerk-color-background: #000000; /* OLED canvas (--background) */
+  --clerk-color-foreground: #fafafa; /* --foreground */
+  --clerk-color-muted: #171717; /* --muted / hover fill */
+  --clerk-color-muted-foreground: #898989; /* Geist gray (--muted-foreground) */
+  --clerk-color-neutral: #fafafa; /* derive grays from white on dark */
+
+  /* Inputs */
+  --clerk-color-input: #000000;
+  --clerk-color-input-foreground: #fafafa;
+  --clerk-color-border: rgba(255, 255, 255, 0.12); /* --border */
+  --clerk-color-ring: #2fdadc; /* iris focus (--signal-accent) */
+  --clerk-color-shadow: rgba(0, 0, 0, 0.6);
+  --clerk-color-shimmer: rgba(255, 255, 255, 0.06);
+
+  /* Brand accent — links, resend, footer actions. The primary BUTTON is
+     inverted to white separately below (Vercel CTA), but everything else
+     Clerk paints with colorPrimary should read iris. */
+  --clerk-color-primary: #2fdadc; /* --signal-accent */
+  --clerk-color-primary-foreground: #000000;
+
+  /* Status */
+  --clerk-color-danger: #f9343c; /* --signal-danger */
+  --clerk-color-success: #4ac777; /* --signal-success */
+  --clerk-color-warning: #f1a633; /* --signal-warning */
+
+  /* Type & shape — match the app (Geist, 0.5rem radius) */
+  --clerk-font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --clerk-font-family-mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+  --clerk-font-size: 0.875rem;
+  --clerk-border-radius: 0.5rem;
+}
+
+/* ── Flat: strip Clerk's card frame so the form sits on our canvas ───────────
+   (peek-flat-design-system: one elevation level — the canvas IS the surface.)
+   The UserButton popover keeps its own elevation, styled further down. */
+.cl-card,
+.cl-cardBox,
+.cl-rootBox {
+  width: 100% !important;
+  max-width: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* AuthScreen already renders the eyebrow / title / subtitle — drop Clerk's. */
+.cl-header {
+  display: none !important;
+}
+
+/* ── Primary CTA — Vercel-style white invert (white bg, black label) ──────────
+   colorPrimary is iris (for links), so the button needs its own treatment. */
+.cl-formButtonPrimary {
+  background: #fafafa !important;
+  color: #000000 !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-transform: none !important;
+  letter-spacing: -0.01em !important;
+  transition: opacity 0.15s ease !important;
+}
+
+.cl-formButtonPrimary:hover {
+  opacity: 0.9 !important;
+}
+
+.cl-formButtonPrimary .cl-spinner {
+  color: #000000 !important;
+}
+
+/* ── OR divider — quiet mono label, matching the app's eyebrow treatment ───── */
+.cl-dividerText {
+  font-family: var(--clerk-font-family-mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────────
+   Strip the footer's filled background so it sits flat, keep "Secured by Clerk"
+   present but quiet, and hide the dev-instance "Development mode" banner noise
+   (dev-only; absent in production anyway). */
+.cl-footer,
+.cl-footerItem,
+.cl-footerAction {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.cl-footerItem {
+  opacity: 0.55 !important;
+}
+
+.cl-footerItem ~ p,
+.cl-footer > p:last-child {
+  display: none !important;
+}
+
+/* ── UserButton popover (app header) — the one place we keep elevation ──────── */
+.cl-userButtonPopoverCard {
+  background: #0f0f0f !important; /* --popover, lifted off the canvas */
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.7) !important;
+}
+
+.cl-userButtonPopoverFooter {
+  display: none !important;
+}
+
+.cl-avatarBox {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+}
