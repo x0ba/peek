@@ -160,11 +160,34 @@ export const getDashboardStats = query({
       .order("desc")
       .take(100);
     const sourceCounts: Record<string, number> = {};
-    for (const s of sessions) sourceCounts[s.source] = (sourceCounts[s.source] ?? 0) + 1;
+    const commonRiskCounts: Record<
+      string,
+      { title: string; count: number; severity: "low" | "medium" | "high" }
+    > = {};
+    for (const s of sessions) {
+      sourceCounts[s.source] = (sourceCounts[s.source] ?? 0) + 1;
+      for (const warning of s.dataCompleteness?.warnings ?? []) {
+        commonRiskCounts[warning] = {
+          title: warning,
+          count: (commonRiskCounts[warning]?.count ?? 0) + 1,
+          severity: "medium",
+        };
+      }
+    }
     const activeSessionIds = new Set(sessions.map((session) => session._id));
-    const scores = reports
-      .filter((report) => !report.deletedAt && activeSessionIds.has(report.sessionId))
-      .map((report) => report.overallScore);
+    const activeReports = reports.filter(
+      (report) => !report.deletedAt && activeSessionIds.has(report.sessionId),
+    );
+    for (const report of activeReports) {
+      for (const risk of report.report?.risks ?? []) {
+        commonRiskCounts[risk.title] = {
+          title: risk.title,
+          count: (commonRiskCounts[risk.title]?.count ?? 0) + 1,
+          severity: risk.severity ?? "medium",
+        };
+      }
+    }
+    const scores = activeReports.map((report) => report.overallScore);
     return {
       totalSessions: sessions.length,
       analyzedSessions: scores.length,
@@ -173,7 +196,9 @@ export const getDashboardStats = query({
         : undefined,
       averageConfidence: averageConfidenceTier(sessions.map((s) => s.dataCompleteness?.confidence)),
       sourceCounts,
-      commonRisks: [],
+      commonRisks: Object.values(commonRiskCounts)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5),
       recentTrend: [],
     };
   },
