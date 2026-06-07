@@ -6,7 +6,7 @@
   import { normalizeCandidate, normalizedTextFromCandidate, parseImport } from "$lib/importers/parse";
   import type { ImportCandidate, ImportFileInput } from "$lib/importers/parse";
   import { redactText } from "$lib/redaction/redact";
-  import type { AgentSource } from "$lib/contracts/api";
+  import type { AgentSource, NormalizedSession, ToolEvent } from "$lib/contracts/api";
 
   const sources = [
     { id: "claude-code", label: "Claude Code", detail: "Project history and JSONL traces", icon: Terminal },
@@ -75,7 +75,7 @@
   const selectedUploadHint = $derived(uploadHints[source]);
   let step = $state(1);
   let source = $state<AgentSource>("claude-code");
-  let text = $state("User: Build a SvelteKit import wizard and preserve the current visual design.\nAssistant: I’ll inspect the repository and product plan first.\nTool: Read plans/product-plan.md\nAssistant: I implemented the source picker, transcript parser, and redaction preview. Validation passed.");
+  let text = $state("");
   let reviewed = $state(false);
   let files = $state<ImportFileInput[]>([]);
   let selectedCandidateId = $state("");
@@ -101,8 +101,44 @@
     selectedCandidateId = "";
   }
 
-  function redactedCandidate(candidate: ImportCandidate) {
-    return { ...candidate, messages: candidate.messages.map((message) => ({ ...message, content: redactText(message.content).redactedText })) };
+  function redactOptional(value: string | undefined) {
+    return value ? redactText(value).redactedText : value;
+  }
+
+  function redactRecord(record: Record<string, unknown>) {
+    const redactedEntries = Object.entries(record).map(([key, value]) => [
+      key,
+      typeof value === "string" ? redactText(value).redactedText : value,
+    ]);
+    return Object.fromEntries(redactedEntries);
+  }
+
+  function redactedCandidate(candidate: ImportCandidate): ImportCandidate {
+    const toolEvents: ToolEvent[] = candidate.toolEvents.map((event) => ({
+      ...event,
+      name: redactOptional(event.name),
+      inputSummary: redactOptional(event.inputSummary),
+      outputSummary: redactOptional(event.outputSummary),
+      rawInputRedacted: redactOptional(event.rawInputRedacted),
+      rawOutputRedacted: redactOptional(event.rawOutputRedacted),
+      errorMessage: redactOptional(event.errorMessage),
+      metadata: event.metadata ? redactRecord(event.metadata) : undefined,
+    }));
+    const artifacts: NormalizedSession["artifacts"] = candidate.artifacts.map((artifact) => ({
+      ...artifact,
+      path: redactOptional(artifact.path),
+      summary: redactOptional(artifact.summary),
+      contentRedacted: redactOptional(artifact.contentRedacted),
+      diffRedacted: redactOptional(artifact.diffRedacted),
+      metadata: artifact.metadata ? redactRecord(artifact.metadata) : undefined,
+    }));
+    return {
+      ...candidate,
+      messages: candidate.messages.map((message) => ({ ...message, content: redactText(message.content).redactedText })),
+      toolEvents,
+      artifacts,
+      sourceMetadata: redactRecord(candidate.sourceMetadata),
+    };
   }
   async function importSession() {
     importing = true;

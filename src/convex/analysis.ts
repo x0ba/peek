@@ -65,6 +65,7 @@ export const retryAnalysisJob = mutation({
     const user = await requireUser(ctx);
     const job = await ctx.db.get(args.jobId);
     if (!job || job.userId !== user._id) throw new Error("Job not found.");
+    if (job.status !== "failed") throw new Error("Only failed jobs can be retried.");
     const now = Date.now();
     await ctx.db.patch(args.jobId, {
       status: "queued",

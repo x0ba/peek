@@ -180,7 +180,7 @@ export const createImportSession = mutation({
       },
       stats: args.session.stats,
       dataCompleteness: args.session.dataCompleteness,
-      redactionMetadata: { ...args.session.redactionMetadata, serverSideApplied: true },
+      redactionMetadata: { ...args.session.redactionMetadata },
       sourceMetadata: args.session.sourceMetadata,
     });
     return { sessionId: id };
