@@ -11,6 +11,10 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
   },
+  "dependencies": {
+    "convex": "^1.40.0",
+    "convex-svelte": "^0.0.12"
+  },
   "devDependencies": {
     "@fontsource-variable/geist": "^5.2.9",
     "@internationalized/date": "^3.12.2",
