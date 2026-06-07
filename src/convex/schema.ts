@@ -27,7 +27,8 @@ export default defineSchema({
     deletedAt: v.optional(v.number()),
   })
     .index("by_userId_and_importedAt", ["userId", "importedAt"])
-    .index("by_userId_and_source", ["userId", "source"]),
+    .index("by_userId_and_source", ["userId", "source"])
+    .index("by_normalizedTraceFileId", ["normalizedTraceFileId"]),
   analysisJobs: defineTable({
     userId: v.id("users"),
     sessionId: v.id("sessions"),

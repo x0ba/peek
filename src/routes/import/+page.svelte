@@ -174,7 +174,8 @@
     let uploadedStorageId: string | undefined;
     try {
       if (!parsed) throw new Error("No importable session detected.");
-      const session = normalizeCandidate(redactedCandidate(parsed), preview.categories, text.length + files.reduce((sum, file) => sum + file.size, 0));
+      const originalCharacterCount = text.length + files.reduce((sum, file) => sum + file.text.length, 0);
+      const session = normalizeCandidate(redactedCandidate(parsed), preview.categories, originalCharacterCount);
       const uploadUrl = await client.mutation(api.sessions.generateUploadUrl, {});
       const response = await fetch(uploadUrl, {
         method: "POST",

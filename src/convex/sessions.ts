@@ -191,16 +191,16 @@ export const deleteOrphanedTrace = mutation({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
-    const recentSessions = await ctx.db
+    const referencingSession = await ctx.db
       .query("sessions")
-      .withIndex("by_userId_and_importedAt", (q) => q.eq("userId", user._id))
-      .order("desc")
-      .take(100);
-    const isReferenced = recentSessions.some(
-      (session) => session.normalizedTraceFileId === args.storageId,
-    );
-    if (!isReferenced) await ctx.storage.delete(args.storageId);
-    return { deleted: !isReferenced };
+      .withIndex("by_normalizedTraceFileId", (q) => q.eq("normalizedTraceFileId", args.storageId))
+      .first();
+    if (referencingSession) {
+      if (referencingSession.userId !== user._id) throw new Error("Trace file not found.");
+      return { deleted: false };
+    }
+    await ctx.storage.delete(args.storageId);
+    return { deleted: true };
   },
 });
 
