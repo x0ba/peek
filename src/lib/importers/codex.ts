@@ -12,6 +12,14 @@ import {
   toolKind,
 } from "./utils";
 
+function codexUserMessageContent(value: unknown) {
+  const content = extractTextContent(value);
+  const requestMarker = "\n## My request for Codex:\n";
+  const markerIndex = content.indexOf(requestMarker);
+  if (markerIndex === -1) return content;
+  return content.slice(markerIndex + requestMarker.length).trim();
+}
+
 export const parseCodex: SourceParser = (input) =>
   input.files.flatMap((file, fileIndex) => {
     const rows = parseJsonl(file.text ?? "");
@@ -25,7 +33,18 @@ export const parseCodex: SourceParser = (input) =>
       if (!item) return;
       if (item.type === "session_meta" && payload)
         Object.assign(metadata, payload, { timestamp: item.timestamp });
-      if (item.type === "response_item" && payload?.type === "message") {
+      if (payload?.type === "user_message") {
+        const content = codexUserMessageContent(payload.message ?? payload.content);
+        if (content.trim())
+          messages.push({
+            id: makeMessageId(`codex_${fileIndex}`, messages.length),
+            role: "user",
+            content,
+            timestamp: typeof item.timestamp === "string" ? item.timestamp : undefined,
+            model: typeof metadata.model === "string" ? metadata.model : undefined,
+            metadata: { turn_id: item.turn_id, type: payload.type },
+          });
+      } else if (item.type === "response_item" && payload?.type === "message") {
         const content = extractTextContent(payload.content);
         if (content.trim())
           messages.push({
