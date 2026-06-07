@@ -182,7 +182,24 @@
       });
       if (!response.ok) throw new Error("Trace upload failed.");
       const { storageId } = (await response.json()) as { storageId: string };
-      const result = await client.mutation(api.sessions.createImportSession, { session, redactionReviewed: reviewed, storageId });
+      const sessionSummary = {
+        schemaVersion: session.schemaVersion,
+        source: session.source,
+        sourceSessionId: session.sourceSessionId,
+        sourceMetadata: session.sourceMetadata,
+        title: session.title,
+        titleInferred: session.titleInferred,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+        importedAt: session.importedAt,
+        messagesPreview: session.messages.slice(0, 20),
+        toolEventsPreview: session.toolEvents.slice(0, 20),
+        artifactsPreview: session.artifacts.slice(0, 20),
+        stats: session.stats,
+        redactionMetadata: session.redactionMetadata,
+        dataCompleteness: session.dataCompleteness,
+      };
+      const result = await client.mutation(api.sessions.createImportSession, { session: sessionSummary, redactionReviewed: reviewed, storageId });
       importedSessionId = result.sessionId;
       step = 6;
     } catch (error) {

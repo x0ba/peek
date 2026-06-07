@@ -112,7 +112,7 @@ const artifact = v.object({
   diffRedacted: v.optional(v.string()),
   metadata: v.optional(v.any()),
 });
-const normalizedSession = v.object({
+const normalizedSessionSummary = v.object({
   schemaVersion: v.literal(1),
   source,
   sourceSessionId: v.optional(v.string()),
@@ -122,9 +122,9 @@ const normalizedSession = v.object({
   createdAt: v.optional(v.string()),
   updatedAt: v.optional(v.string()),
   importedAt: v.string(),
-  messages: v.array(message),
-  toolEvents: v.array(toolEvent),
-  artifacts: v.array(artifact),
+  messagesPreview: v.array(message),
+  toolEventsPreview: v.array(toolEvent),
+  artifactsPreview: v.array(artifact),
   stats,
   redactionMetadata,
   dataCompleteness,
@@ -156,7 +156,7 @@ export const generateUploadUrl = mutation({
 
 export const createImportSession = mutation({
   args: {
-    session: normalizedSession,
+    session: normalizedSessionSummary,
     redactionReviewed: v.boolean(),
     storageId: v.optional(v.id("_storage")),
   },
@@ -174,9 +174,9 @@ export const createImportSession = mutation({
       importedAt: args.session.importedAt,
       normalizedTraceFileId: args.storageId,
       normalizedTraceSummary: {
-        messagesPreview: args.session.messages.slice(0, 20),
-        toolEventsPreview: args.session.toolEvents.slice(0, 20),
-        artifactsPreview: args.session.artifacts.slice(0, 20),
+        messagesPreview: args.session.messagesPreview,
+        toolEventsPreview: args.session.toolEventsPreview,
+        artifactsPreview: args.session.artifactsPreview,
       },
       stats: args.session.stats,
       dataCompleteness: args.session.dataCompleteness,
