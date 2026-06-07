@@ -110,6 +110,5 @@ export function fallbackWarnings(messages: NormalizedMessage[], toolEvents: Tool
     ...(toolEvents.length === 0
       ? ["No tool events found; transcript fallback confidence is lower."]
       : []),
-    "No file diffs found; output quality will use transcript evidence.",
   ];
 }

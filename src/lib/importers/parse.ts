@@ -56,6 +56,11 @@ export function normalizeCandidate(
   originalCharacterCount: number,
 ): NormalizedSession {
   const hasTimestamps = candidate.messages.some((message) => Boolean(message.timestamp));
+  const titleInferred = ![
+    candidate.sourceMetadata.aiTitle,
+    candidate.sourceMetadata.title,
+    candidate.sourceMetadata.name,
+  ].some((title) => typeof title === "string" && title.trim());
   const hasTestResults = candidate.toolEvents.some((event) => event.kind === "test");
   const errorCount = candidate.toolEvents.filter((event) => event.status === "error").length;
   return {
@@ -73,7 +78,7 @@ export function normalizeCandidate(
       importMode: "guided-file-or-paste",
     },
     title: candidate.title,
-    titleInferred: true,
+    titleInferred,
     importedAt: new Date().toISOString(),
     messages: candidate.messages,
     toolEvents: candidate.toolEvents,

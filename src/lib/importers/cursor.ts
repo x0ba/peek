@@ -76,12 +76,10 @@ export const parseCursor: SourceParser = (input) => {
         artifacts: [],
         sourceMetadata,
         confidence: confidenceFor(messages, toolEvents, sourceMetadata),
-        warnings: [
-          "Cursor export parsing is best-effort",
-          ...(toolEvents.length === 0
+        warnings:
+          toolEvents.length === 0
             ? ["Assistant responses or tool events may be missing depending on Cursor version"]
-            : []),
-        ],
+            : [],
       },
     ];
   });
