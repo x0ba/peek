@@ -311,7 +311,7 @@ export const completeJobWithReport = internalMutation({
         .map((m: any, index: number) => ({
           order: index + 1,
           title: `${m.role} message`,
-          detail: m.content.slice(0, 220),
+          detail: (typeof m.content === "string" ? m.content : "").slice(0, 220),
           relatedIds: [m.id],
         })),
     };

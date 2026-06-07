@@ -171,6 +171,7 @@
   async function importSession() {
     importing = true;
     importError = "";
+    let uploadedStorageId: string | undefined;
     try {
       if (!parsed) throw new Error("No importable session detected.");
       const session = normalizeCandidate(redactedCandidate(parsed), preview.categories, text.length + files.reduce((sum, file) => sum + file.size, 0));
@@ -182,6 +183,7 @@
       });
       if (!response.ok) throw new Error("Trace upload failed.");
       const { storageId } = (await response.json()) as { storageId: string };
+      uploadedStorageId = storageId;
       const sessionSummary = {
         schemaVersion: session.schemaVersion,
         source: session.source,
@@ -203,6 +205,13 @@
       importedSessionId = result.sessionId;
       step = 6;
     } catch (error) {
+      if (uploadedStorageId) {
+        try {
+          await client.mutation(api.sessions.deleteOrphanedTrace, { storageId: uploadedStorageId });
+        } catch {
+          // Best-effort cleanup only; preserve the original import error for the user.
+        }
+      }
       importError = error instanceof Error ? error.message : "Import failed.";
     } finally {
       importing = false;

@@ -187,6 +187,23 @@ export const createImportSession = mutation({
   },
 });
 
+export const deleteOrphanedTrace = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const recentSessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q) => q.eq("userId", user._id))
+      .order("desc")
+      .take(100);
+    const isReferenced = recentSessions.some(
+      (session) => session.normalizedTraceFileId === args.storageId,
+    );
+    if (!isReferenced) await ctx.storage.delete(args.storageId);
+    return { deleted: !isReferenced };
+  },
+});
+
 export const listSessions = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
