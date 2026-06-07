@@ -12,6 +12,7 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
   },
   "dependencies": {
+    "@paper-design/shaders": "^0.0.76",
     "convex": "^1.40.0",
     "convex-svelte": "^0.0.12",
     "svelte-clerk": "^1.1.9"

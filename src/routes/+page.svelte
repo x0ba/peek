@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { ArrowRight, Bot, Check, FileSearch, LockKeyhole, Radar, ShieldCheck, Terminal } from "@lucide/svelte";
+  import { Bot, Check, FileSearch, LockKeyhole, Radar, ShieldCheck, Terminal } from "@lucide/svelte";
   import { Show } from "svelte-clerk";
+  import { goto } from "$app/navigation";
   import Logo from "$lib/components/app/logo.svelte";
+  import { LiquidMetalButton } from "$lib/components/ui/liquid-metal-button";
 </script>
 
 <svelte:head><title>Peek · Agent trace analyzer</title></svelte:head>
@@ -33,8 +35,8 @@
         <h1 class="max-w-3xl text-5xl font-semibold leading-[1.02] tracking-[-0.045em] sm:text-7xl">The black box recorder for coding agents.</h1>
         <p class="mt-7 max-w-xl text-lg leading-8 text-muted-foreground">Import traces from Claude Code, Cursor, Codex, Pi, or anywhere else. Peek redacts sensitive data locally, reconstructs the run, and delivers an evidence-backed review.</p>
         <div class="mt-9 flex flex-wrap gap-3">
-          <a href="/import" class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">Import a session <ArrowRight class="size-4" /></a>
-          <a href="/dashboard" class="rounded-md border border-border bg-card px-4 py-2.5 text-sm font-medium hover:bg-accent">View demo dashboard</a>
+          <LiquidMetalButton label="Import a session" width={190} onclick={() => goto("/import")} />
+          <a href="/dashboard" class="inline-flex h-[46px] items-center rounded-full border border-border bg-card px-5 text-sm font-medium transition-transform duration-300 hover:-translate-y-0.5 hover:bg-accent">View demo dashboard</a>
         </div>
         <div class="mt-9 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[11px] text-muted-foreground">
           <span class="flex items-center gap-1.5"><Check class="size-3 text-signal-success" /> local redaction</span>
