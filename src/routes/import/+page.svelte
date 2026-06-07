@@ -247,7 +247,7 @@
         <div><h2 class="text-lg font-medium">Where did this session run?</h2><p class="mt-1 text-sm text-muted-foreground">Source-specific parsing runs first, with tolerant fallback detection.</p></div>
         <div class="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {#each sources as item}
-            <button onclick={() => (source = item.id)} class="group min-h-32 rounded-lg border p-4 text-left transition-colors {source === item.id ? 'border-signal-accent bg-signal-accent/[0.06]' : 'border-border hover:border-border hover:bg-accent'}">
+            <button onclick={() => { source = item.id; markImportChanged(); }} class="group min-h-32 rounded-lg border p-4 text-left transition-colors {source === item.id ? 'border-signal-accent bg-signal-accent/[0.06]' : 'border-border hover:border-border hover:bg-accent'}">
               <div class="flex items-start justify-between"><item.icon class="size-5 {source === item.id ? 'text-signal-accent' : 'text-muted-foreground'}" />{#if source === item.id}<Check class="size-4 text-signal-accent" />{/if}</div>
               <p class="mt-6 text-sm font-medium">{item.label}</p>
               <p class="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>

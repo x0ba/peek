@@ -113,6 +113,7 @@ export function normalizeCandidate(
   };
 }
 
+/** @deprecated Use normalizeCandidate(redactedCandidate(parsed), ...) instead. */
 export function normalizeImport(
   text: string,
   redactedText: string,
