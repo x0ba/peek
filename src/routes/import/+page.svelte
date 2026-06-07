@@ -1,7 +1,9 @@
 <script lang="ts">
   import { ArrowLeft, ArrowRight, Bot, Braces, Check, ClipboardPaste, Code2, FileJson, FileUp, ShieldCheck, Terminal, UploadCloud } from "@lucide/svelte";
   import Shell from "$lib/components/app/shell.svelte";
-  import { parseTranscript } from "$lib/importers/parse";
+  import { useConvexClient } from "convex-svelte";
+  import { api } from "$convex/_generated/api";
+  import { normalizeImport, parseTranscript } from "$lib/importers/parse";
   import { redactText } from "$lib/redaction/redact";
   import type { AgentSource } from "$lib/contracts/api";
 
@@ -18,6 +20,10 @@
   let text = $state("User: Build a SvelteKit import wizard and preserve the current visual design.\nAssistant: I’ll inspect the repository and product plan first.\nTool: Read plans/product-plan.md\nAssistant: I implemented the source picker, transcript parser, and redaction preview. Validation passed.");
   let reviewed = $state(false);
   let fileName = $state("");
+  let importing = $state(false);
+  let importError = $state("");
+  let importedSessionId = $state("");
+  const client = useConvexClient();
   const parsed = $derived(parseTranscript(text, source));
   const preview = $derived(redactText(text));
 
@@ -28,8 +34,35 @@
     fileName = file.name;
     text = await file.text();
   }
+  async function importSession() {
+    importing = true;
+    importError = "";
+    try {
+      const session = normalizeImport(text, preview.redactedText, source, preview.categories);
+      const uploadUrl = await client.mutation(api.sessions.generateUploadUrl, {});
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(session),
+      });
+      if (!response.ok) throw new Error("Trace upload failed.");
+      const { storageId } = (await response.json()) as { storageId: string };
+      const result = await client.mutation(api.sessions.createImportSession, { session, redactionReviewed: reviewed, storageId });
+      importedSessionId = result.sessionId;
+      step = 6;
+    } catch (error) {
+      importError = error instanceof Error ? error.message : "Import failed.";
+    } finally {
+      importing = false;
+    }
+  }
+
   function next() {
     if (step === 4 && !reviewed) return;
+    if (step === 5) {
+      void importSession();
+      return;
+    }
     step = Math.min(6, step + 1);
   }
 </script>
@@ -131,7 +164,7 @@
           <span class="flex size-14 items-center justify-center rounded-full border border-signal-success/30 bg-signal-success/10"><Check class="size-7 text-signal-success" /></span>
           <h2 class="mt-6 text-2xl font-semibold tracking-tight">Session imported</h2>
           <p class="mt-2 max-w-md text-sm leading-6 text-muted-foreground">The normalized trace is ready. Open the session to inspect its timeline and analysis report.</p>
-          <a href="/sessions/ses_9f3a1c" class="mt-7 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">Open session <ArrowRight class="size-4" /></a>
+          <a href="/sessions/{importedSessionId}" class="mt-7 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">Open session <ArrowRight class="size-4" /></a>
         </div>
       {/if}
     </section>
@@ -139,7 +172,10 @@
     {#if step < 6}
       <div class="flex justify-between">
         <button onclick={() => (step = Math.max(1, step - 1))} disabled={step === 1} class="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-accent disabled:opacity-30 disabled:hover:bg-transparent"><ArrowLeft class="size-4" />Back</button>
-        <button onclick={next} disabled={(step === 2 && !text.trim()) || (step === 4 && !reviewed)} class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-30">{step === 5 ? "Import session" : "Continue"}{#if step === 5}<FileUp class="size-4" />{:else}<ArrowRight class="size-4" />{/if}</button>
+        <div class="flex flex-col items-end gap-2">
+          {#if importError}<p class="text-xs text-signal-danger">{importError}</p>{/if}
+          <button onclick={next} disabled={importing || (step === 2 && !text.trim()) || (step === 4 && !reviewed)} class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-30">{importing ? "Importing…" : step === 5 ? "Import session" : "Continue"}{#if step === 5}<FileUp class="size-4" />{:else}<ArrowRight class="size-4" />{/if}</button>
+        </div>
       </div>
     {/if}
   </div>
