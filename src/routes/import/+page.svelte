@@ -85,7 +85,7 @@
   const client = useConvexClient();
   const candidates = $derived(parseImport({ files, pastedText: text, source }));
   const parsed = $derived(candidates.find((candidate) => candidate.id === selectedCandidateId) ?? candidates[0]);
-  const candidateText = $derived(parsed ? normalizedTextFromCandidate(parsed) : text);
+  const candidateText = $derived(parsed ? redactionTextFromCandidate(parsed) : text);
   const preview = $derived(redactText(candidateText));
 
   function markImportChanged() {
@@ -115,12 +115,26 @@
     return value ? redactText(value).redactedText : value;
   }
 
+  function redactUnknown(value: unknown): unknown {
+    if (typeof value === "string") return redactText(value).redactedText;
+    if (Array.isArray(value)) return value.map(redactUnknown);
+    if (value && typeof value === "object") return redactRecord(value as Record<string, unknown>);
+    return value;
+  }
+
   function redactRecord(record: Record<string, unknown>) {
-    const redactedEntries = Object.entries(record).map(([key, value]) => [
-      key,
-      typeof value === "string" ? redactText(value).redactedText : value,
-    ]);
+    const redactedEntries = Object.entries(record).map(([key, value]) => [key, redactUnknown(value)]);
     return Object.fromEntries(redactedEntries);
+  }
+
+  function redactionTextFromCandidate(candidate: ImportCandidate) {
+    return [
+      normalizedTextFromCandidate(candidate),
+      JSON.stringify(candidate.toolEvents),
+      JSON.stringify(candidate.artifacts),
+      JSON.stringify(candidate.sourceMetadata),
+      JSON.stringify(candidate.messages.map((message) => message.metadata ?? {})),
+    ].join("\n\n");
   }
 
   function redactedCandidate(candidate: ImportCandidate): ImportCandidate {
@@ -144,7 +158,11 @@
     }));
     return {
       ...candidate,
-      messages: candidate.messages.map((message) => ({ ...message, content: redactText(message.content).redactedText })),
+      messages: candidate.messages.map((message) => ({
+        ...message,
+        content: redactText(message.content).redactedText,
+        metadata: message.metadata ? redactRecord(message.metadata) : undefined,
+      })),
       toolEvents,
       artifacts,
       sourceMetadata: redactRecord(candidate.sourceMetadata),
