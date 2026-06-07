@@ -1,102 +1,106 @@
 <script lang="ts">
-  import { Bot, Check, FileSearch, LockKeyhole, Radar, ShieldCheck, Terminal } from "@lucide/svelte";
+  import { ArrowUpRight } from "@lucide/svelte";
   import { Show } from "svelte-clerk";
   import { goto } from "$app/navigation";
   import Logo from "$lib/components/app/logo.svelte";
   import { LiquidMetalButton } from "$lib/components/ui/liquid-metal-button";
+
+  // A telemetry-style trace, generated once. Calm baseline punctuated by
+  // "events" (tool calls / spikes) — the black-box recorder, drawn as a line.
+  const W = 1200;
+  const MID = 70;
+  const trace = (() => {
+    let seed = 1337;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+    const pts: string[] = [];
+    let x = 0;
+    while (x <= W) {
+      const wobble = Math.sin(x / 26) * 4 + Math.sin(x / 11) * 2;
+      const spike = rand() > 0.94 ? (rand() - 0.5) * 84 : 0;
+      const y = MID + wobble + spike;
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+      x += 8 + rand() * 6;
+    }
+    return `M ${pts.join(" L ")}`;
+  })();
 </script>
 
-<svelte:head><title>Peek · Agent trace analyzer</title></svelte:head>
+<svelte:head><title>Peek · The black box recorder for coding agents</title></svelte:head>
 
-<div class="dark min-h-screen overflow-hidden bg-background text-foreground">
-  <header class="relative z-10 mx-auto flex h-20 max-w-[1180px] items-center px-5">
+<div class="dark relative flex h-[100svh] flex-col overflow-hidden bg-background text-foreground">
+  <!-- ── Atmosphere ─────────────────────────────────────────── -->
+  <div class="pointer-events-none absolute -top-[34%] left-1/2 size-[1100px] -translate-x-1/2 rounded-full bg-signal-accent/[0.07] blur-[160px]"></div>
+  <div class="pointer-events-none absolute -bottom-[30%] right-[-10%] size-[640px] rounded-full bg-signal-success/[0.045] blur-[150px]"></div>
+  <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-background via-background/70 to-transparent"></div>
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="peek-rise relative z-20 mx-auto flex h-24 w-full max-w-[1180px] items-center px-6">
     <Logo />
-    <nav class="ml-auto flex items-center gap-5 text-sm text-muted-foreground sm:gap-7">
-      <a href="#workflow" class="hidden hover:text-foreground sm:block">Workflow</a>
-      <a href="#privacy" class="hidden hover:text-foreground sm:block">Privacy</a>
+    <nav class="ml-auto flex items-center gap-6 text-sm text-muted-foreground">
       <Show when="signed-in">
-        <a href="/dashboard" class="rounded-md border border-border px-3 py-2 text-foreground hover:bg-accent">Open dashboard</a>
+        <a href="/dashboard" class="rounded-full border border-border px-4 py-2 text-foreground transition-colors hover:bg-accent">Open dashboard</a>
         {#snippet fallback()}
-          <a href="/sign-in" class="hover:text-foreground">Sign in</a>
-          <a href="/sign-up" class="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground hover:opacity-90">Get started</a>
+          <a href="/sign-in" class="transition-colors hover:text-foreground">Sign in</a>
         {/snippet}
       </Show>
     </nav>
   </header>
 
-  <main>
-    <section class="relative mx-auto grid min-h-[680px] max-w-[1180px] items-center gap-16 px-5 py-20 lg:grid-cols-[1.05fr_.95fr]">
-      <div class="pointer-events-none absolute -top-48 left-1/3 size-[720px] rounded-full bg-signal-accent/[0.055] blur-[120px]"></div>
-      <div class="peek-rise relative">
-        <div class="mb-7 inline-flex items-center gap-2 rounded-full border border-signal-success/25 bg-signal-success/[0.06] px-3 py-1.5 font-mono text-[11px] text-signal-success">
-          <span class="size-1.5 rounded-full bg-signal-success shadow-[0_0_8px_var(--signal-success)]"></span>
-          YOUR AGENT RAN. NOW SEE WHAT HAPPENED.
-        </div>
-        <h1 class="max-w-3xl text-5xl font-semibold leading-[1.02] tracking-[-0.045em] sm:text-7xl">The black box recorder for coding agents.</h1>
-        <p class="mt-7 max-w-xl text-lg leading-8 text-muted-foreground">Import traces from Claude Code, Cursor, Codex, Pi, or anywhere else. Peek redacts sensitive data locally, reconstructs the run, and delivers an evidence-backed review.</p>
-        <div class="mt-9 flex flex-wrap gap-3">
-          <LiquidMetalButton label="Import a session" width={190} onclick={() => goto("/import")} />
-          <a href="/dashboard" class="inline-flex h-[46px] items-center rounded-full border border-border bg-card px-5 text-sm font-medium transition-transform duration-300 hover:-translate-y-0.5 hover:bg-accent">View demo dashboard</a>
-        </div>
-        <div class="mt-9 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[11px] text-muted-foreground">
-          <span class="flex items-center gap-1.5"><Check class="size-3 text-signal-success" /> local redaction</span>
-          <span class="flex items-center gap-1.5"><Check class="size-3 text-signal-success" /> normalized traces</span>
-          <span class="flex items-center gap-1.5"><Check class="size-3 text-signal-success" /> evidence-linked scores</span>
-        </div>
-      </div>
+  <!-- ── Focal centerpiece: the live trace ──────────────────── -->
+  <div class="pointer-events-none relative z-10 flex flex-[1.6] items-center justify-center">
+    <div class="peek-rise relative w-full max-w-[440px] px-6" style="animation-delay: 220ms">
+      <svg viewBox="0 0 {W} 140" class="h-14 w-full overflow-visible" fill="none" aria-hidden="true">
+        <path d={trace} stroke="var(--signal-accent)" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" class="opacity-[0.18]" />
+        <path
+          d={trace}
+          stroke="var(--signal-accent)"
+          stroke-width="1.6"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+          pathLength="1000"
+          class="trace-sweep drop-shadow-[0_0_6px_color-mix(in_oklch,var(--signal-accent)_70%,transparent)]"
+        />
+      </svg>
+    </div>
+  </div>
 
-      <div class="peek-rise relative" style="animation-delay: 100ms">
-        <div class="absolute -inset-4 rounded-3xl bg-gradient-to-br from-signal-accent/10 via-transparent to-signal-success/5 blur-2xl"></div>
-        <div class="relative overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black">
-          <div class="flex items-center border-b border-border px-4 py-3">
-            <div class="flex gap-1.5"><span class="size-2.5 rounded-full bg-white/10"></span><span class="size-2.5 rounded-full bg-white/10"></span><span class="size-2.5 rounded-full bg-white/10"></span></div>
-            <span class="mx-auto font-mono text-[10px] text-muted-foreground">ses_9f3a1c · analysis</span>
-          </div>
-          <div class="grid grid-cols-[46px_1fr]">
-            <div class="border-r border-border py-5 text-center font-mono text-[10px] leading-8 text-muted-foreground/40">01<br />02<br />03<br />04<br />05<br />06<br />07</div>
-            <div class="space-y-5 p-5">
-              <div class="flex items-start justify-between">
-                <div><p class="text-xs text-muted-foreground">OVERALL QUALITY</p><p class="mt-1 text-4xl font-semibold">4.6<span class="text-base text-muted-foreground"> / 5</span></p></div>
-                <span class="rounded border border-signal-success/25 bg-signal-success/10 px-2 py-1 font-mono text-[10px] text-signal-success">HIGH CONFIDENCE</span>
-              </div>
-              <div class="grid grid-cols-5 gap-1">{#each [1,2,3,4,5] as bar}<span class="h-1 rounded-full {bar < 5 ? 'bg-signal-success' : 'bg-muted'}"></span>{/each}</div>
-              <div class="border-l-2 border-signal-accent pl-3"><p class="text-xs font-medium">Goal reconstructed</p><p class="mt-1 text-xs leading-5 text-muted-foreground">Build a guided import flow with redaction, validation, and a usable session preview.</p></div>
-              <div class="space-y-2 font-mono text-[11px]">
-                <div class="flex justify-between border-b border-border pb-2"><span class="text-muted-foreground">42 messages</span><span class="text-signal-success">complete</span></div>
-                <div class="flex justify-between border-b border-border pb-2"><span class="text-muted-foreground">24 tool calls</span><span>3 errors recovered</span></div>
-                <div class="flex justify-between"><span class="text-muted-foreground">12 files touched</span><span class="text-signal-warning">1 risk flagged</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="workflow" class="border-y border-border bg-card/50">
-      <div class="mx-auto grid max-w-[1180px] divide-y divide-border px-5 md:grid-cols-3 md:divide-x md:divide-y-0">
-        {#each [
-          { icon: FileSearch, n: "01", title: "Import any trace", copy: "Files, folders, JSONL, Markdown, or pasted transcripts from every major harness." },
-          { icon: ShieldCheck, n: "02", title: "Redact before upload", copy: "Keys, tokens, emails, local paths, and secrets are detected in your browser." },
-          { icon: Radar, n: "03", title: "Inspect the evidence", copy: "Scores, risks, recommendations, and a reconstructed timeline link back to the trace." }
-        ] as item}
-          <div class="py-10 md:px-8 first:pl-0 last:pr-0">
-            <div class="flex items-center justify-between"><item.icon class="size-5 text-signal-accent" /><span class="font-mono text-xs text-muted-foreground">{item.n}</span></div>
-            <h2 class="mt-8 text-lg font-medium">{item.title}</h2><p class="mt-2 text-sm leading-6 text-muted-foreground">{item.copy}</p>
-          </div>
-        {/each}
-      </div>
-    </section>
-
-    <section id="privacy" class="mx-auto max-w-[1180px] px-5 py-24">
-      <div class="grid gap-10 rounded-xl border border-border bg-card p-7 lg:grid-cols-[1fr_1.4fr] lg:p-12">
-        <div><LockKeyhole class="size-7 text-signal-success" /><h2 class="mt-5 text-3xl font-semibold tracking-tight">Your source code deserves a careful boundary.</h2></div>
-        <div class="grid gap-5 sm:grid-cols-2">
-          {#each ["Redaction happens before upload", "Raw secret values are never stored", "Delete sessions and reports anytime", "Only normalized traces reach analysis"] as line}
-            <div class="flex gap-3 border-t border-border pt-4"><Check class="mt-0.5 size-4 shrink-0 text-signal-success" /><span class="text-sm text-muted-foreground">{line}</span></div>
-          {/each}
-        </div>
-      </div>
-    </section>
+  <!-- ── Hero: anchored bottom-left ─────────────────────────── -->
+  <main class="relative z-10 mx-auto w-full max-w-[1180px] px-6 pb-[clamp(3.5rem,10vh,7rem)]">
+    <h1 class="peek-rise max-w-[16ch] text-balance text-[clamp(1.9rem,3.6vw,3rem)] font-semibold leading-[1.02] tracking-[-0.035em]" style="animation-delay: 120ms">
+      The black box recorder<br class="hidden sm:block" /> for coding agents.
+    </h1>
+    <p class="peek-rise mt-4 max-w-md text-sm leading-6 text-muted-foreground" style="animation-delay: 180ms">
+      Import a trace from Claude Code, Cursor, Codex, or anywhere else. Peek redacts secrets locally, reconstructs the run, and hands back an evidence-backed review.
+    </p>
+    <div class="peek-rise mt-7 flex flex-wrap items-center gap-4" style="animation-delay: 240ms">
+      <Show when="signed-in">
+        <LiquidMetalButton label="Open dashboard" width={186} onclick={() => goto("/dashboard")} />
+        {#snippet fallback()}
+          <LiquidMetalButton label="Get started" width={162} onclick={() => goto("/sign-up")} />
+        {/snippet}
+      </Show>
+    </div>
   </main>
-  <footer class="mx-auto flex max-w-[1180px] items-center border-t border-border px-5 py-7 text-xs text-muted-foreground"><Terminal class="mr-2 size-3.5" /> Peek · trace observability for agentic software work <Bot class="ml-auto size-4" /></footer>
 </div>
+
+<style>
+  /* A single bright segment travels the recorded trace — live playback. */
+  .trace-sweep {
+    stroke-dasharray: 150 1000;
+    animation: trace-sweep 5s linear infinite;
+  }
+  @keyframes trace-sweep {
+    from {
+      stroke-dashoffset: 1150;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .trace-sweep {
+      animation: none;
+    }
+  }
+</style>
