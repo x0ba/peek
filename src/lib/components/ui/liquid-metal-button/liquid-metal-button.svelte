@@ -10,12 +10,14 @@
 		label?: string;
 		viewMode?: "text" | "icon";
 		width?: number;
+		height?: number;
 	};
 
 	let {
 		label = "Get Started",
 		viewMode = "text",
 		width,
+		height,
 		class: className,
 		onclick,
 		...restProps
@@ -30,10 +32,12 @@
 
 	const dimensions = $derived.by(() => {
 		if (viewMode === "icon") {
-			return { width: 46, height: 46, innerWidth: 42, innerHeight: 42 };
+			const s = height ?? 46;
+			return { width: s, height: s, innerWidth: s - 4, innerHeight: s - 4 };
 		}
 		const w = width ?? 142;
-		return { width: w, height: 46, innerWidth: w - 4, innerHeight: 42 };
+		const h = height ?? 46;
+		return { width: w, height: h, innerWidth: w - 4, innerHeight: h - 4 };
 	});
 
 	onMount(() => {

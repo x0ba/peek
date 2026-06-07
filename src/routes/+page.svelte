@@ -38,7 +38,7 @@
     <Logo />
     <nav class="ml-auto flex items-center gap-6 text-sm text-muted-foreground">
       <Show when="signed-in">
-        <a href="/dashboard" class="rounded-full border border-border px-4 py-2 text-foreground transition-colors hover:bg-accent">Open dashboard</a>
+        <LiquidMetalButton label="Open dashboard" width={150} height={36} onclick={() => goto("/dashboard")} />
         {#snippet fallback()}
           <a href="/sign-in" class="transition-colors hover:text-foreground">Sign in</a>
         {/snippet}
