@@ -38,15 +38,31 @@ async function ownedSession(ctx: any, sessionId: any, userId: any) {
   return session;
 }
 
+function averageConfidenceTier(confidences: unknown[]) {
+  const scores: number[] = confidences
+    .map((confidence) =>
+      confidence === "high" ? 3 : confidence === "medium" ? 2 : confidence === "low" ? 1 : 0,
+    )
+    .filter((score) => score > 0);
+  if (!scores.length) return "unknown";
+  const average = scores.reduce((sum, score) => Number(sum) + Number(score), 0) / scores.length;
+  if (average >= 2.5) return "high";
+  if (average >= 1.5) return "medium";
+  return "low";
+}
+
 export const createAnalysisJob = mutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     await ownedSession(ctx, args.sessionId, user._id);
-    const existingReport = await ctx.db
-      .query("analysisReports")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
-      .first();
+    const existingReport = (
+      await ctx.db
+        .query("analysisReports")
+        .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+        .order("desc")
+        .take(10)
+    ).find((report) => !report.deletedAt);
     if (existingReport) {
       const existingJob = await ctx.db.get(existingReport.jobId);
       if (existingJob && existingJob.userId === user._id) return jobSummary(existingJob);
@@ -152,13 +168,7 @@ export const getDashboardStats = query({
       averageQualityScore: scores.length
         ? scores.reduce((a, b) => a + b, 0) / scores.length
         : undefined,
-      averageConfidence: sessions.some((s) => s.dataCompleteness?.confidence === "high")
-        ? "high"
-        : sessions.some((s) => s.dataCompleteness?.confidence === "medium")
-          ? "medium"
-          : sessions.length
-            ? "low"
-            : "unknown",
+      averageConfidence: averageConfidenceTier(sessions.map((s) => s.dataCompleteness?.confidence)),
       sourceCounts,
       commonRisks: [],
       recentTrend: [],
