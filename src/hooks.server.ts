@@ -1,6 +1,7 @@
 import { redirect, type Handle } from "@sveltejs/kit";
 import { sequence } from "@sveltejs/kit/hooks";
 import { withClerkHandler } from "svelte-clerk/server";
+import { surfaceFor } from "$lib/theme";
 
 // App areas that require an authenticated user. Everything else
 // (landing page, /sign-in, /sign-up, static assets) stays public.
@@ -20,4 +21,14 @@ const guardRoutes: Handle = async ({ event, resolve }) => {
   return resolve(event);
 };
 
-export const handle = sequence(withClerkHandler(), guardRoutes);
+// Stamp `data-surface` on <html> server-side so the first paint already has the
+// correct `color-scheme`. Without this, the dark default flashes a black
+// scrollbar-gutter strip on the right when loading an app route in light mode.
+const stampSurface: Handle = async ({ event, resolve }) => {
+  const surface = surfaceFor(event.url.pathname);
+  return resolve(event, {
+    transformPageChunk: ({ html }) => html.replace("<html", `<html data-surface="${surface}"`),
+  });
+};
+
+export const handle = sequence(withClerkHandler(), stampSurface, guardRoutes);

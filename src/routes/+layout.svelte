@@ -9,6 +9,7 @@
   import { clerkAppearance } from "$lib/auth/clerk-appearance";
   import ConvexClerk from "$lib/components/app/convex-clerk.svelte";
   import AppLoadingFrame from "$lib/components/app/app-loading-frame.svelte";
+  import { surfaceFor } from "$lib/theme";
 
   let { children, data } = $props();
 
@@ -21,15 +22,11 @@
   setupConvex(convexUrl);
 
   // The app shell (Shell.svelte), the landing page, and the auth screens all
-  // auto-theme with the device via `.theme-auto`. Mark the document so the
-  // <html> canvas behind the content (overscroll, native scrollbar) follows the
-  // device theme on these routes. The visible theme is pure CSS, so no flash here.
-  const autoThemedRoutes = ["/", "/dashboard", "/sessions", "/import", "/settings", "/sign-in", "/sign-up"];
-  const isAutoThemed = $derived(
-    autoThemedRoutes.some((r) => page.url.pathname === r || (r !== "/" && page.url.pathname.startsWith(`${r}/`)))
-  );
+  // auto-theme with the device via `.theme-auto`. `data-surface` is stamped on
+  // <html> server-side (hooks.server.ts) so the first paint is flash-free; this
+  // keeps it in sync across client-side navigation.
   $effect(() => {
-    document.documentElement.dataset.surface = isAutoThemed ? "app" : "site";
+    document.documentElement.dataset.surface = surfaceFor(page.url.pathname);
   });
 </script>
 

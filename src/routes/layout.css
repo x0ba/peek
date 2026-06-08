@@ -86,7 +86,11 @@
   --grid-line: light-dark(oklch(0 0 0 / 4.5%), oklch(1 0 0 / 2.5%));
   --scrollbar-thumb: light-dark(oklch(0 0 0 / 17%), oklch(1 0 0 / 12%));
   --scrollbar-thumb-hover: light-dark(oklch(0 0 0 / 30%), oklch(1 0 0 / 22%));
-  --skeleton-sheen: light-dark(oklch(1 0 0 / 60%), oklch(1 0 0 / 8%));
+  /* Skeletons: a base that reads against the canvas (a real gray on paper, a
+     lifted black on OLED) and a sheen that sweeps brighter than the base. The
+     old light base sat at ~0.97 on a 0.985 canvas — effectively invisible. */
+  --skeleton-base: light-dark(oklch(0 0 0 / 8%), oklch(1 0 0 / 14%));
+  --skeleton-sheen: light-dark(oklch(0 0 0 / 8%), oklch(1 0 0 / 10%));
 }
 
 /* Resolution switches. `.dark` pins dark everywhere it has always been used
@@ -242,7 +246,7 @@
     position: relative;
     overflow: hidden;
     border-radius: var(--radius-sm);
-    background: color-mix(in oklch, var(--muted) 72%, transparent);
+    background: var(--skeleton-base);
   }
 
   .skeleton::after {
