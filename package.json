@@ -9,7 +9,8 @@
     "preview": "vp preview",
     "prepare": "vp config && svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "typecheck": "vp run -r --concurrency-limit 2 typecheck"
   },
   "dependencies": {
     "@paper-design/shaders": "^0.0.76",
