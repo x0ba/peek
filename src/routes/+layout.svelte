@@ -7,6 +7,7 @@
   import { env } from "$env/dynamic/public";
   import { clerkAppearance } from "$lib/auth/clerk-appearance";
   import ConvexClerk from "$lib/components/app/convex-clerk.svelte";
+  import AppLoadingFrame from "$lib/components/app/app-loading-frame.svelte";
 
   let { children, data } = $props();
 
@@ -24,6 +25,9 @@
   appearance={clerkAppearance}
 >
   <ConvexClerk>
+    {#snippet fallback()}
+      <AppLoadingFrame />
+    {/snippet}
     {@render children()}
   </ConvexClerk>
 </ClerkProvider>
