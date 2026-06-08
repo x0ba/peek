@@ -130,7 +130,59 @@ const normalizedSessionSummary = v.object({
   dataCompleteness,
 });
 
-function summary(doc: any) {
+function reportSummary(report: any) {
+  if (!report || report.deletedAt) return undefined;
+  return {
+    id: report._id,
+    jobId: report.jobId,
+    generatedAt: report.generatedAt,
+    modelProvider: report.modelProvider,
+    modelName: report.modelName,
+    analysisConfidence: report.analysisConfidence,
+    overallScore: report.overallScore,
+    overallLabel: report.report?.qualityAssessment?.overallLabel ?? "good",
+    topRisks: (report.report?.risks ?? []).slice(0, 3).map((risk: any) => ({
+      title: risk.title,
+      severity: risk.severity,
+    })),
+  };
+}
+
+function jobSummary(job: any) {
+  if (!job) return undefined;
+  return {
+    id: job._id,
+    sessionId: job.sessionId,
+    status: job.status,
+    progressMessage: job.progressMessage,
+    errorMessage: job.errorMessage,
+    retryCount: job.retryCount,
+    createdAt: new Date(job.createdAt).toISOString(),
+    updatedAt: new Date(job.updatedAt).toISOString(),
+    completedAt: job.completedAt ? new Date(job.completedAt).toISOString() : undefined,
+    retryable: job.status === "failed",
+  };
+}
+
+async function latestReport(ctx: any, sessionId: any) {
+  const reports = await ctx.db
+    .query("analysisReports")
+    .withIndex("by_sessionId", (q: any) => q.eq("sessionId", sessionId))
+    .order("desc")
+    .take(10);
+  return reports.find((report: any) => !report.deletedAt);
+}
+
+async function latestJob(ctx: any, sessionId: any) {
+  const jobs = await ctx.db
+    .query("analysisJobs")
+    .withIndex("by_sessionId", (q: any) => q.eq("sessionId", sessionId))
+    .order("desc")
+    .take(1);
+  return jobs[0];
+}
+
+async function summary(ctx: any, doc: any) {
   return {
     id: doc._id,
     source: doc.source,
@@ -143,6 +195,8 @@ function summary(doc: any) {
     stats: doc.stats,
     dataCompleteness: doc.dataCompleteness,
     redactionMetadata: doc.redactionMetadata,
+    latestJob: jobSummary(await latestJob(ctx, doc._id)),
+    latestReport: reportSummary(await latestReport(ctx, doc._id)),
   };
 }
 
@@ -213,7 +267,7 @@ export const listSessions = query({
       .withIndex("by_userId_and_importedAt", (q) => q.eq("userId", user._id))
       .order("desc")
       .take(args.limit ?? 25);
-    return rows.filter((r) => !r.deletedAt).map(summary);
+    return await Promise.all(rows.filter((r) => !r.deletedAt).map((row) => summary(ctx, row)));
   },
 });
 export const listRecentSessions = listSessions;
@@ -225,7 +279,7 @@ export const getSession = query({
     const doc = await ctx.db.get(args.sessionId);
     if (!doc || doc.userId !== user._id || doc.deletedAt) return null;
     return {
-      ...summary(doc),
+      ...(await summary(ctx, doc)),
       messagesPreview: doc.normalizedTraceSummary.messagesPreview,
       toolEventsPreview: doc.normalizedTraceSummary.toolEventsPreview,
       artifactsPreview: doc.normalizedTraceSummary.artifactsPreview,

@@ -204,6 +204,7 @@
       };
       const result = await client.mutation(api.sessions.createImportSession, { session: sessionSummary, redactionReviewed: reviewed, storageId });
       importedSessionId = result.sessionId;
+      await client.mutation(api.analysis.createAnalysisJob, { sessionId: result.sessionId });
       step = 6;
     } catch (error) {
       if (uploadedStorageId) {
@@ -231,7 +232,7 @@
 
 <svelte:head><title>Import session · Peek</title></svelte:head>
 <Shell>
-  <div class="peek-rise mx-auto max-w-4xl space-y-8">
+  <div class="mx-auto max-w-4xl space-y-8">
     <header>
       <p class="eyebrow eyebrow-accent mb-2">Local-first ingestion</p>
       <h1 class="text-[28px] font-semibold tracking-tight">Import agent session</h1>

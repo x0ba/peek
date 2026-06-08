@@ -34,7 +34,7 @@
         </div>
       </div>
     </div>
-    <nav class="mx-auto flex max-w-[1280px] overflow-x-auto px-3 lg:px-5">
+    <nav class="mx-auto flex max-w-[1280px] overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:px-5">
       {#each tabs as tab}
         {@const active = page.url.pathname === tab.href || (tab.href === "/sessions" && page.url.pathname.startsWith("/sessions"))}
         <a href={tab.href} class="relative flex h-11 shrink-0 items-center px-1">
