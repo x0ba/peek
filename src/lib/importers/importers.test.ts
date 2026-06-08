@@ -128,6 +128,7 @@ describe("trace importers", () => {
         payload: {
           type: "message",
           role: "user",
+          turn_id: "turn_legacy",
           content: [{ type: "input_text", text: "Fix the legacy trace" }],
         },
       }),
@@ -148,5 +149,6 @@ describe("trace importers", () => {
       ["user", "Fix the legacy trace"],
       ["assistant", "I'll fix it."],
     ]);
+    expect(candidate.messages[0]?.metadata?.turn_id).toBe("turn_legacy");
   });
 });

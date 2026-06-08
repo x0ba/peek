@@ -78,7 +78,7 @@ export const parseCodex: SourceParser = (input) =>
             content,
             timestamp: typeof item.timestamp === "string" ? item.timestamp : undefined,
             model: typeof metadata.model === "string" ? metadata.model : undefined,
-            metadata: { turn_id: item.turn_id, type: item.type },
+            metadata: { turn_id: payload.turn_id ?? item.turn_id, type: item.type },
           });
       }
       const candidate = payload ?? item;
