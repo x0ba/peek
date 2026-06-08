@@ -24,6 +24,8 @@ jobs:
           node-version-file: package.json
           cache: true
           run-install: true
+      - name: Test
+        run: vp test
       - name: Check
         run: vp check
       - name: Build

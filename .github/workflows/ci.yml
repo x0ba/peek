@@ -22,6 +22,9 @@ jobs:
           cache: true
           run-install: true
 
+      - name: Test
+        run: vp test
+
       - name: Check
         run: vp check
 
