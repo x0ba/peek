@@ -9,8 +9,7 @@
     "preview": "vp preview",
     "prepare": "vp config && svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
   },
   "dependencies": {
     "@paper-design/shaders": "^0.0.76",
@@ -41,6 +40,9 @@
     "typescript": "^6.0.2",
     "vite": "catalog:",
     "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": "^24.16.0"
   },
   "packageManager": "pnpm@11.5.2"
 }
