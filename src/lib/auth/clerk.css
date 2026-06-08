@@ -1,5 +1,12 @@
 /* ───────────────────────────────────────────────────────────────────────────
-   Clerk theming — Peek flat dark surface
+   Clerk theming — Peek flat surface, device-themed (light + dark)
+   ----------------------------------------------------------------------------
+   The base block below is the DARK theme. A `@media (prefers-color-scheme:
+   light)` block at the very bottom re-paints the same Clerk variables and the
+   handful of `.cl-*` overrides for the light canvas. Every surface that hosts a
+   Clerk component now auto-themes (auth screens via `.theme-auto`, the
+   app-header UserButton via the shell's `.theme-auto`), so following
+   `prefers-color-scheme` is always correct.
    ----------------------------------------------------------------------------
    Clerk's hosted components (SignIn / SignUp / UserButton) are rendered by
    clerk-js, loaded unpinned from Clerk's CDN. We theme them the *documented,
@@ -102,6 +109,28 @@
   opacity: 0.9 !important;
 }
 
+/* ── Social buttons — keep the "Last used" badge from clipping ───────────────
+   Clerk pins a small "Last used" badge to a social button's top-right corner,
+   bleeding it above and to the right of the button edge. Every box on the chain
+   from the button up to the card sets `overflow: hidden` (so hover fills respect
+   the radius), so the badge gets lopped off both top and right. Release overflow
+   along the whole chain and reserve a little top headroom so the freed badge has
+   somewhere to sit. */
+.cl-rootBox,
+.cl-card,
+.cl-cardBox,
+.cl-main,
+.cl-form,
+.cl-socialButtons,
+.cl-socialButtonsBlockButton,
+.cl-socialButtonsIconButton {
+  overflow: visible !important;
+}
+
+.cl-socialButtons {
+  padding-top: 0.5rem !important;
+}
+
 /* ── OR divider — quiet mono label, matching the app's eyebrow treatment ───── */
 .cl-dividerText {
   font-family: var(--clerk-font-family-mono) !important;
@@ -139,4 +168,59 @@
 
 .cl-avatarBox {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ── Light theme ─────────────────────────────────────────────────────────────
+   Mirror of the dark block above, flipped for the paper-white canvas. Fires
+   only when the device asks for light — and since every Clerk host is now
+   auto-themed, that's exactly when we want it. Hex values are the light side of
+   the layout.css `light-dark()` tokens (the iris accent is deepened so it keeps
+   its meaning on white). The two `.cl-*` rules re-invert what variables can't:
+   the primary CTA (now black-on-white) and the popover's elevation. */
+@media (prefers-color-scheme: light) {
+  :where(.cl-rootBox, .cl-userButtonPopoverRootBox, .cl-userButtonPopoverCard, .cl-modalContent) {
+    color-scheme: light;
+
+    /* Surfaces */
+    --clerk-color-background: #fafafa; /* paper canvas (--background) */
+    --clerk-color-foreground: #171717; /* --foreground */
+    --clerk-color-muted: #f4f4f4; /* hover fill (--muted) */
+    --clerk-color-muted-foreground: #737373; /* Geist gray (--muted-foreground) */
+    --clerk-color-neutral: #171717; /* derive grays from black on light */
+
+    /* Inputs */
+    --clerk-color-input: #ffffff;
+    --clerk-color-input-foreground: #171717;
+    --clerk-color-border: rgba(0, 0, 0, 0.12); /* hairline (--input) */
+    --clerk-color-ring: #0084aa; /* iris focus, deepened (--signal-accent) */
+    --clerk-color-shadow: rgba(0, 0, 0, 0.12);
+    --clerk-color-shimmer: rgba(0, 0, 0, 0.04);
+
+    /* Brand accent — links, resend, footer actions (deepened iris). */
+    --clerk-color-primary: #0084aa; /* --signal-accent (light) */
+    --clerk-color-primary-foreground: #ffffff;
+
+    /* Status */
+    --clerk-color-danger: #d40924; /* --signal-danger (light) */
+    --clerk-color-success: #218a45; /* --signal-success (light) */
+    --clerk-color-warning: #c97400; /* --signal-warning (light) */
+  }
+
+  /* Primary CTA — flip the Vercel invert: black bg, white label on the white
+     canvas (the dark block paints it white-on-black). */
+  .cl-formButtonPrimary {
+    background: #171717 !important;
+    color: #fafafa !important;
+  }
+
+  /* UserButton popover — keep its single elevation, now a white lifted surface. */
+  .cl-userButtonPopoverCard {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.09) !important;
+    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .cl-avatarBox {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12) !important;
+  }
 }

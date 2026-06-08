@@ -33,7 +33,7 @@
 
 <svelte:head><title>Peek · The black box recorder for coding agents</title></svelte:head>
 
-<div class="dark relative flex h-[100svh] flex-col overflow-hidden bg-background text-foreground">
+<div class="theme-auto relative flex h-[100svh] flex-col overflow-hidden bg-background text-foreground">
   <!-- ── Atmosphere ─────────────────────────────────────────── -->
   <div class="pointer-events-none absolute -top-[34%] left-1/2 size-[1100px] -translate-x-1/2 rounded-full bg-signal-accent/[0.07] blur-[160px]"></div>
   <div class="pointer-events-none absolute -bottom-[30%] right-[-10%] size-[640px] rounded-full bg-signal-success/[0.045] blur-[150px]"></div>

@@ -2,86 +2,101 @@
 @import "tw-animate-css";
 @import "shadcn-svelte/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* `dark:` utilities fire for an explicit `.dark` ancestor (landing / auth, which
+   are permanently dark) AND inside the auto-themed app shell when the OS asks
+   for dark. Light mode is handled by `light-dark()` + `color-scheme`, below. */
+@custom-variant dark {
+  &:is(.dark *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:is(.theme-auto *) {
+      @slot;
+    }
+  }
+}
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
+/* ─── Theme tokens ──────────────────────────────────────────────────
+   Every color is a `light-dark(<light>, <dark>)` pair, resolved per element
+   from its inherited `color-scheme`. The dark side is the original Geist
+   OLED palette; the light side is its neutral, zero-hue counterpart tuned
+   for a paper-white canvas (Vercel/Linear flat: one elevation, hairlines,
+   no nested cards). Which side wins is decided by `color-scheme`:
+     • html / .dark   → dark   (landing, auth, app fallback)
+     • .theme-auto    → follows the OS (the app shell only)
+   No JS, no flash. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0.008 326);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.008 326);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.008 326);
-  --primary: oklch(0.212 0.019 322.12);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.96 0.003 325.6);
-  --secondary-foreground: oklch(0.212 0.019 322.12);
-  --muted: oklch(0.96 0.003 325.6);
-  --muted-foreground: oklch(0.542 0.034 322.5);
-  --accent: oklch(0.212 0.019 322.12);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0.005 325.62);
-  --input: oklch(0.922 0.005 325.62);
-  --ring: oklch(0.711 0.019 323.02);
-  --chart-1: oklch(0.865 0.012 325.68);
-  --chart-2: oklch(0.542 0.034 322.5);
-  --chart-3: oklch(0.435 0.029 321.78);
-  --chart-4: oklch(0.364 0.029 323.89);
-  --chart-5: oklch(0.263 0.024 320.12);
+  --background: light-dark(oklch(0.985 0 0), oklch(0 0 0)); /* canvas: paper / OLED black */
+  --foreground: light-dark(oklch(0.205 0 0), oklch(0.985 0 0));
+  --card: light-dark(oklch(1 0 0), oklch(0.145 0 0)); /* the single raised surface */
+  --card-foreground: light-dark(oklch(0.205 0 0), oklch(0.985 0 0));
+  --popover: light-dark(oklch(1 0 0), oklch(0.17 0 0));
+  --popover-foreground: light-dark(oklch(0.205 0 0), oklch(0.985 0 0));
+  /* Primary inverts the canvas: near-black CTA on light, white on dark. */
+  --primary: light-dark(oklch(0.205 0 0), oklch(0.985 0 0));
+  --primary-foreground: light-dark(oklch(0.985 0 0), oklch(0 0 0));
+  --secondary: light-dark(oklch(0.97 0 0), oklch(0.205 0 0));
+  --secondary-foreground: light-dark(oklch(0.205 0 0), oklch(0.985 0 0));
+  --muted: light-dark(oklch(0.968 0 0), oklch(0.205 0 0));
+  --muted-foreground: light-dark(
+    oklch(0.505 0 0),
+    oklch(0.63 0 0)
+  ); /* Geist gray ~#737373 / #8f8f8f */
+  --accent: light-dark(oklch(0.958 0 0), oklch(0.225 0 0)); /* hover surface */
+  --accent-foreground: light-dark(oklch(0.205 0 0), oklch(0.985 0 0));
+  --destructive: light-dark(oklch(0.55 0.22 25), oklch(0.63 0.23 25));
+  --border: light-dark(oklch(0 0 0 / 9%), oklch(1 0 0 / 12%)); /* hairline */
+  --input: light-dark(oklch(0 0 0 / 12%), oklch(1 0 0 / 14%));
+  --ring: light-dark(oklch(0.6 0.13 216), oklch(0.81 0.13 196)); /* Peek iris focus */
+  --chart-1: light-dark(oklch(0.6 0.13 216), oklch(0.81 0.13 196));
+  --chart-2: light-dark(oklch(0.57 0.15 150), oklch(0.74 0.16 152));
+  --chart-3: light-dark(oklch(0.66 0.14 66), oklch(0.78 0.15 73));
+  --chart-4: light-dark(oklch(0.55 0.22 25), oklch(0.63 0.23 25));
+  --chart-5: light-dark(oklch(0.5 0 0), oklch(0.63 0 0));
   --radius: 0.5rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0.008 326);
-  --sidebar-primary: oklch(0.212 0.019 322.12);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.96 0.003 325.6);
-  --sidebar-accent-foreground: oklch(0.212 0.019 322.12);
-  --sidebar-border: oklch(0.922 0.005 325.62);
-  --sidebar-ring: oklch(0.711 0.019 323.02);
+  --sidebar: light-dark(oklch(0.99 0 0), oklch(0 0 0));
+  --sidebar-foreground: light-dark(oklch(0.205 0 0), oklch(0.985 0 0));
+  --sidebar-primary: light-dark(oklch(0.205 0 0), oklch(0.81 0.13 196));
+  --sidebar-primary-foreground: light-dark(oklch(0.985 0 0), oklch(0 0 0));
+  --sidebar-accent: light-dark(oklch(0.958 0 0), oklch(0.205 0 0));
+  --sidebar-accent-foreground: light-dark(oklch(0.205 0 0), oklch(0.985 0 0));
+  --sidebar-border: light-dark(oklch(0 0 0 / 9%), oklch(1 0 0 / 12%));
+  --sidebar-ring: light-dark(oklch(0.6 0.13 216), oklch(0.81 0.13 196));
+
+  /* Peek signal palette — the only colors allowed to mean something.
+     Light side is deepened so each hue keeps its meaning on white. */
+  --signal-accent: light-dark(
+    oklch(0.56 0.13 222),
+    oklch(0.81 0.13 196)
+  ); /* iris/aqua: brand / active / links */
+  --signal-success: light-dark(
+    oklch(0.56 0.14 150),
+    oklch(0.74 0.16 152)
+  ); /* green: analyzed / passing */
+  --signal-warning: light-dark(
+    oklch(0.64 0.15 64),
+    oklch(0.78 0.15 73)
+  ); /* amber: running / caution */
+  --signal-danger: light-dark(oklch(0.55 0.22 25), oklch(0.64 0.23 25)); /* red: failed / risk */
+  --signal-muted: light-dark(oklch(0.62 0 0), oklch(0.55 0 0)); /* queued / idle */
+
+  /* Theme-aware atmospherics (grid, scrollbar, skeleton sheen). */
+  --grid-line: light-dark(oklch(0 0 0 / 4.5%), oklch(1 0 0 / 2.5%));
+  --scrollbar-thumb: light-dark(oklch(0 0 0 / 17%), oklch(1 0 0 / 12%));
+  --scrollbar-thumb-hover: light-dark(oklch(0 0 0 / 30%), oklch(1 0 0 / 22%));
+  --skeleton-sheen: light-dark(oklch(1 0 0 / 60%), oklch(1 0 0 / 8%));
 }
 
+/* Resolution switches. `.dark` pins dark everywhere it has always been used
+   (landing, auth screens); `.theme-auto` lets the app shell — and only the
+   app shell — track the device theme. */
 .dark {
-  /* Geist: pure OLED black canvas, perfectly neutral grays (zero hue) */
-  --background: oklch(0 0 0); /* #000 */
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0); /* elevated surface ~#0d0d0d */
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.17 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  /* White is the primary action color (Vercel CTA invert) */
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0 0 0);
-  --secondary: oklch(0.205 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.205 0 0);
-  --muted-foreground: oklch(0.63 0 0); /* Geist gray ~#8f8f8f */
-  --accent: oklch(0.225 0 0); /* hover surface */
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.63 0.23 25);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.81 0.13 196); /* Peek iris focus */
-  --chart-1: oklch(0.81 0.13 196);
-  --chart-2: oklch(0.74 0.16 152);
-  --chart-3: oklch(0.78 0.15 73);
-  --chart-4: oklch(0.63 0.23 25);
-  --chart-5: oklch(0.63 0 0);
-  --sidebar: oklch(0 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.81 0.13 196);
-  --sidebar-primary-foreground: oklch(0 0 0);
-  --sidebar-accent: oklch(0.205 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.81 0.13 196);
-
-  /* Peek signal palette — the only colors allowed to mean something */
-  --signal-accent: oklch(0.81 0.13 196); /* iris/aqua: brand / active / links */
-  --signal-success: oklch(0.74 0.16 152); /* green: analyzed / passing */
-  --signal-warning: oklch(0.78 0.15 73); /* amber: running / caution */
-  --signal-danger: oklch(0.64 0.23 25); /* red: failed / risk */
-  --signal-muted: oklch(0.55 0 0); /* queued / idle */
+  color-scheme: dark;
+}
+.theme-auto {
+  color-scheme: light dark;
 }
 
 @theme inline {
@@ -140,14 +155,22 @@
   html {
     @apply font-sans;
     overflow-y: scroll;
-    background: oklch(0 0 0);
+    /* Site default is dark; the app routes opt the canvas (overscroll, native
+       scrollbar) into the device theme via [data-surface="app"], set by the
+       root layout. The visible app theme itself comes from `.theme-auto` on the
+       shell, so this only governs the strip behind the content. */
+    color-scheme: dark;
+    background: var(--background);
     font-optical-sizing: auto;
     scrollbar-gutter: stable;
+  }
+  html[data-surface="app"] {
+    color-scheme: light dark;
   }
   body {
     @apply text-foreground;
     min-height: 100%;
-    background: oklch(0 0 0);
+    background: var(--background);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "ss01"; /* Geist alternates */
@@ -169,13 +192,13 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: oklch(1 0 0 / 12%);
+    background: var(--scrollbar-thumb);
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: oklch(1 0 0 / 22%);
+    background: var(--scrollbar-thumb-hover);
     background-clip: padding-box;
   }
 }
@@ -207,8 +230,8 @@
   /* Faint blueprint grid for atmosphere on the app canvas. */
   .canvas-grid {
     background-image:
-      linear-gradient(to right, oklch(1 0 0 / 2.5%) 1px, transparent 1px),
-      linear-gradient(to bottom, oklch(1 0 0 / 2.5%) 1px, transparent 1px);
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
     background-size: 56px 56px;
     background-position: center top;
     -webkit-mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 35%, transparent 100%);
@@ -227,7 +250,7 @@
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, oklch(1 0 0 / 8%), transparent);
+    background: linear-gradient(90deg, transparent, var(--skeleton-sheen), transparent);
     animation: skeleton-sweep 1.45s ease-in-out infinite;
   }
 }

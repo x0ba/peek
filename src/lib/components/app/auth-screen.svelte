@@ -16,7 +16,7 @@
   } = $props();
 </script>
 
-<div class="dark relative flex min-h-[100svh] flex-col overflow-hidden bg-background text-foreground">
+<div class="theme-auto relative flex min-h-[100svh] flex-col overflow-hidden bg-background text-foreground">
   <!-- ── Atmosphere — same vocabulary as the landing page ─────── -->
   <div class="pointer-events-none absolute -top-[32%] left-1/2 size-[1000px] -translate-x-1/2 rounded-full bg-signal-accent/[0.06] blur-[160px]"></div>
   <div class="pointer-events-none absolute -bottom-[34%] right-[-12%] size-[600px] rounded-full bg-signal-success/[0.04] blur-[150px]"></div>

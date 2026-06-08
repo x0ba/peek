@@ -15,7 +15,7 @@
   ];
 </script>
 
-<div class="dark relative min-h-screen overflow-x-clip bg-background text-foreground">
+<div class="theme-auto relative min-h-screen overflow-x-clip bg-background text-foreground">
   <header class="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-xl">
     <div class="mx-auto flex h-16 max-w-[1280px] items-center gap-3 px-4 lg:px-6">
       <Logo />
