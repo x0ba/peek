@@ -27,7 +27,7 @@
 
 <svelte:head><title>Settings · Peek</title></svelte:head>
 <Shell>
-  <div class="peek-rise mx-auto max-w-3xl">
+  <div class="mx-auto max-w-3xl">
     <header class="pb-2">
       <p class="eyebrow eyebrow-accent mb-2">Workspace control</p>
       <h1 class="text-[28px] font-semibold tracking-tight">Settings</h1>

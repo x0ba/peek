@@ -137,16 +137,21 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+    overflow-y: scroll;
+    background: oklch(0 0 0);
+    font-optical-sizing: auto;
+    scrollbar-gutter: stable;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    min-height: 100%;
+    background: oklch(0 0 0);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "ss01"; /* Geist alternates */
     letter-spacing: -0.011em; /* Geist sits tight by default */
-  }
-  html {
-    @apply font-sans;
-    font-optical-sizing: auto;
   }
   ::selection {
     background: color-mix(in oklch, var(--signal-accent) 28%, transparent);
@@ -173,21 +178,6 @@
     background: oklch(1 0 0 / 22%);
     background-clip: padding-box;
   }
-}
-
-/* Page-load reveal — one orchestrated entrance */
-@keyframes peek-rise {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.peek-rise {
-  animation: peek-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* ─── Structural system ─────────────────────────────────────────────
