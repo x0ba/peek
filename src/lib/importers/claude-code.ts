@@ -48,7 +48,18 @@ export const parseClaudeCode: SourceParser = (input) =>
       for (const block of blocks) {
         const b = asRecord(block);
         if (!b) continue;
-        if (typeof b.type === "string" && !["text", "tool_use", "tool_result"].includes(b.type))
+        if (
+          typeof b.type === "string" &&
+          ![
+            "text",
+            "thinking",
+            "redacted_thinking",
+            "tool_use",
+            "tool_result",
+            "server_tool_use",
+            "web_search_tool_result",
+          ].includes(b.type)
+        )
           unknownBlockTypes.add(b.type);
         if (b.type === "tool_use" || b.type === "tool_result") {
           const name =

@@ -42,14 +42,30 @@ export const parseCodex: SourceParser = (input) =>
             content,
             timestamp: typeof item.timestamp === "string" ? item.timestamp : undefined,
             model: typeof metadata.model === "string" ? metadata.model : undefined,
-            metadata: { turn_id: item.turn_id, type: payload.type },
+            metadata: { turn_id: payload.turn_id ?? item.turn_id, type: payload.type },
           });
-      } else if (item.type === "response_item" && payload?.type === "message") {
-        const content = extractTextContent(payload.content);
+      } else if (payload?.type === "agent_message") {
+        const content = extractTextContent(payload.message ?? payload.content);
         if (content.trim())
           messages.push({
             id: makeMessageId(`codex_${fileIndex}`, messages.length),
-            role: roleFrom(payload.role),
+            role: "assistant",
+            content,
+            timestamp: typeof item.timestamp === "string" ? item.timestamp : undefined,
+            model: typeof metadata.model === "string" ? metadata.model : undefined,
+            metadata: {
+              turn_id: payload.turn_id ?? item.turn_id,
+              type: payload.type,
+              phase: payload.phase,
+            },
+          });
+      } else if (item.type === "response_item" && payload?.type === "message") {
+        const role = roleFrom(payload.role);
+        const content = extractTextContent(payload.content);
+        if (content.trim() && role !== "unknown" && role !== "user" && role !== "assistant")
+          messages.push({
+            id: makeMessageId(`codex_${fileIndex}`, messages.length),
+            role,
             content,
             timestamp: typeof item.timestamp === "string" ? item.timestamp : undefined,
             model: typeof metadata.model === "string" ? metadata.model : undefined,
@@ -63,7 +79,18 @@ export const parseCodex: SourceParser = (input) =>
           : typeof item.type === "string"
             ? item.type
             : "";
-      if (/function_call|tool_call|shell|command/i.test(candidateType)) {
+      if (/function.*output|tool.*output/i.test(candidateType)) {
+        toolEvents.push({
+          id: makeToolEventId(`codex_${fileIndex}`, toolEvents.length),
+          kind: "other",
+          outputSummary: extractTextContent(candidate.output ?? candidate.content).slice(0, 240),
+          status: /error|failed/i.test(extractTextContent(candidate.output ?? candidate.content))
+            ? "error"
+            : "success",
+          timestamp: typeof item.timestamp === "string" ? item.timestamp : undefined,
+          metadata: { type: candidateType, call_id: candidate.call_id },
+        });
+      } else if (/function_call|tool_call|shell|command/i.test(candidateType)) {
         const name =
           typeof candidate.name === "string"
             ? candidate.name
@@ -77,20 +104,14 @@ export const parseCodex: SourceParser = (input) =>
           inputSummary: extractTextContent(
             candidate.arguments ?? candidate.input ?? candidate.command,
           ).slice(0, 240),
+          rawInputRedacted: extractTextContent(candidate.arguments ?? candidate.input).slice(
+            0,
+            2000,
+          ),
           status: "unknown",
           timestamp: typeof item.timestamp === "string" ? item.timestamp : undefined,
-          metadata: { type: candidateType },
-        });
-      } else if (/function.*output|tool.*output/i.test(candidateType)) {
-        toolEvents.push({
-          id: makeToolEventId(`codex_${fileIndex}`, toolEvents.length),
-          kind: "other",
-          outputSummary: extractTextContent(candidate.output ?? candidate.content).slice(0, 240),
-          status: /error|failed/i.test(extractTextContent(candidate.output ?? candidate.content))
-            ? "error"
-            : "success",
-          timestamp: typeof item.timestamp === "string" ? item.timestamp : undefined,
-          metadata: { type: candidateType },
+          relatedMessageId: messages.at(-1)?.id,
+          metadata: { type: candidateType, call_id: candidate.call_id },
         });
       } else if (/function/i.test(candidateType)) unrecognizedFunction = true;
     });
