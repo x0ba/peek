@@ -8,7 +8,7 @@
   // fetcher backed by Clerk's `convex` JWT template, and lazily provisions
   // the Convex user row once authenticated. Must render inside <ClerkProvider>
   // and inside a tree where setupConvex() has run.
-  let { children }: { children: Snippet } = $props();
+  let { children, fallback }: { children: Snippet; fallback?: Snippet } = $props();
 
   const ctx = useClerkContext();
   const client = useConvexClient();
@@ -66,4 +66,6 @@
 
 {#if convexReady}
   {@render children()}
+{:else if fallback}
+  {@render fallback()}
 {/if}

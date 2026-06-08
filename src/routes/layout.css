@@ -214,6 +214,34 @@
     -webkit-mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 35%, transparent 100%);
     mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 35%, transparent 100%);
   }
+
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklch, var(--muted) 72%, transparent);
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, oklch(1 0 0 / 8%), transparent);
+    animation: skeleton-sweep 1.45s ease-in-out infinite;
+  }
+}
+
+@keyframes skeleton-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
 }
 
 /* Numeric data sits in tabular mono for clean column alignment. */
