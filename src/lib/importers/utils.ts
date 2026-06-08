@@ -48,7 +48,6 @@ export function extractTextContent(value: unknown): string {
   const record = asRecord(value);
   if (!record) return "";
   if (typeof record.text === "string") return record.text;
-  if (typeof record.thinking === "string") return record.thinking;
   if (typeof record.content === "string" || Array.isArray(record.content))
     return extractTextContent(record.content);
   if (typeof record.message === "string" || Array.isArray(record.message))

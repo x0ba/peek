@@ -27,6 +27,14 @@ export const parseCodex: SourceParser = (input) =>
     const messages: NormalizedMessage[] = [];
     const toolEvents: ToolEvent[] = [];
     let unrecognizedFunction = false;
+    const hasEventMessages = rows.some((row) => {
+      const item = asRecord(row);
+      const payload = asRecord(item?.payload);
+      return (
+        item?.type === "event_msg" &&
+        (payload?.type === "user_message" || payload?.type === "agent_message")
+      );
+    });
     rows.forEach((row) => {
       const item = asRecord(row);
       const payload = asRecord(item?.payload);
@@ -62,7 +70,8 @@ export const parseCodex: SourceParser = (input) =>
       } else if (item.type === "response_item" && payload?.type === "message") {
         const role = roleFrom(payload.role);
         const content = extractTextContent(payload.content);
-        if (content.trim() && role !== "unknown" && role !== "user" && role !== "assistant")
+        const isConversationMessage = role === "user" || role === "assistant";
+        if (content.trim() && role !== "unknown" && (!hasEventMessages || !isConversationMessage))
           messages.push({
             id: makeMessageId(`codex_${fileIndex}`, messages.length),
             role,

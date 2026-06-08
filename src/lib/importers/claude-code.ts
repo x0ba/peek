@@ -12,6 +12,17 @@ import {
   toolKind,
 } from "./utils";
 
+function extractClaudeContent(value: unknown): string {
+  if (Array.isArray(value)) return value.map(extractClaudeContent).filter(Boolean).join("\n");
+  const block = asRecord(value);
+  if (block?.type === "thinking" && typeof block.thinking === "string") return block.thinking;
+  return extractTextContent(value);
+}
+
+function summarizeToolValue(value: unknown) {
+  return extractTextContent(value) || (value === undefined ? "" : JSON.stringify(value));
+}
+
 export const parseClaudeCode: SourceParser = (input) =>
   input.files.flatMap((file, fileIndex) => {
     const rows = parseJsonl(file.text ?? "");
@@ -30,7 +41,7 @@ export const parseClaudeCode: SourceParser = (input) =>
         metadata.agentName = item.agentName;
       const nested = asRecord(item.message);
       const payload = nested ?? item;
-      const content = extractTextContent(
+      const content = extractClaudeContent(
         payload.content ?? payload.text ?? payload.body ?? item.content ?? item.text ?? item.body,
       );
       const role = roleFrom(payload.role ?? item.role);
@@ -61,20 +72,30 @@ export const parseClaudeCode: SourceParser = (input) =>
           ].includes(b.type)
         )
           unknownBlockTypes.add(b.type);
-        if (b.type === "tool_use" || b.type === "tool_result") {
+        if (
+          b.type === "tool_use" ||
+          b.type === "tool_result" ||
+          b.type === "server_tool_use" ||
+          b.type === "web_search_tool_result"
+        ) {
+          const isResult = b.type === "tool_result" || b.type === "web_search_tool_result";
           const name =
             typeof b.name === "string" ? b.name : typeof b.type === "string" ? b.type : "tool";
           toolEvents.push({
             id: makeToolEventId(`claude_${fileIndex}`, toolEvents.length),
             kind: toolKind(name),
             name,
-            inputSummary: extractTextContent(b.input).slice(0, 240),
-            outputSummary: extractTextContent(b.content).slice(0, 240),
-            rawInputRedacted: b.input ? JSON.stringify(b.input).slice(0, 2000) : undefined,
-            status: b.is_error === true ? "error" : "unknown",
+            inputSummary: isResult ? undefined : summarizeToolValue(b.input).slice(0, 240),
+            outputSummary: isResult ? extractTextContent(b.content).slice(0, 240) : undefined,
+            rawInputRedacted:
+              !isResult && b.input ? JSON.stringify(b.input).slice(0, 2000) : undefined,
+            status: b.is_error === true ? "error" : isResult ? "success" : "unknown",
             timestamp: typeof item.timestamp === "string" ? item.timestamp : undefined,
             relatedMessageId: messages.at(-1)?.id,
-            metadata: { blockType: b.type },
+            metadata: {
+              blockType: b.type,
+              toolUseId: b.tool_use_id ?? b.id,
+            },
           });
         }
       }
