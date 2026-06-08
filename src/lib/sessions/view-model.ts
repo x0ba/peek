@@ -18,6 +18,15 @@ export const sourceLabels: Record<AgentSource, string> = {
   unknown: "Unknown",
 };
 
+export const sourceColors: Record<AgentSource, string> = {
+  "claude-code": "var(--signal-accent)",
+  cursor: "oklch(0.72 0.16 262)",
+  codex: "var(--signal-success)",
+  pi: "var(--signal-warning)",
+  manual: "oklch(0.72 0.13 324)",
+  unknown: "var(--signal-muted)",
+};
+
 const activeStatuses = new Set([
   "queued",
   "parsing",
@@ -96,6 +105,7 @@ export function sourceMix(sourceCounts: Partial<Record<AgentSource, number>>) {
   return entries.map(([source, count]) => ({
     source,
     label: sourceLabels[source],
+    color: sourceColors[source],
     count,
     percent: total ? Math.round((count / total) * 100) : 0,
   }));

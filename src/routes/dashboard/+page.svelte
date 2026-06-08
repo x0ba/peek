@@ -77,8 +77,8 @@
         <section>
           <div class="mb-4 flex items-center justify-between"><h2 class="eyebrow">Source mix</h2><span class="font-mono text-[10px] text-muted-foreground">ALL</span></div>
           {#if mix.length}
-            <div class="flex h-2 overflow-hidden rounded-full">{#each mix as item}<span class="bg-signal-accent" style="width:{item.percent}%"></span>{/each}</div>
-            <ul class="mt-4 divide-y divide-border">{#each mix as item}<li class="flex justify-between py-2 text-xs text-muted-foreground"><span>{item.label}</span><span class="tnum font-mono">{item.percent}%</span></li>{/each}</ul>
+            <div class="flex h-2 overflow-hidden rounded-full bg-muted/40">{#each mix as item}<span style="width:{item.percent}%; background:{item.color}" title="{item.label}: {item.percent}%"></span>{/each}</div>
+            <ul class="mt-4 divide-y divide-border">{#each mix as item}<li class="flex justify-between gap-3 py-2 text-xs text-muted-foreground"><span class="flex items-center gap-2"><span class="size-1.5 rounded-full" style="background:{item.color}"></span>{item.label}</span><span class="tnum font-mono">{item.percent}%</span></li>{/each}</ul>
           {:else}<p class="text-xs text-muted-foreground">No imports yet.</p>{/if}
         </section>
 
