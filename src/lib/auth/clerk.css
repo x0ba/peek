@@ -102,10 +102,6 @@
   opacity: 0.9 !important;
 }
 
-.cl-formButtonPrimary .cl-spinner {
-  color: #000000 !important;
-}
-
 /* ── OR divider — quiet mono label, matching the app's eyebrow treatment ───── */
 .cl-dividerText {
   font-family: var(--clerk-font-family-mono) !important;
@@ -128,11 +124,6 @@
 
 .cl-footerItem {
   opacity: 0.55 !important;
-}
-
-.cl-footerItem ~ p,
-.cl-footer > p:last-child {
-  display: none !important;
 }
 
 /* ── UserButton popover (app header) — the one place we keep elevation ──────── */

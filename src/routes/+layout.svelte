@@ -11,8 +11,13 @@
 
   let { children, data } = $props();
 
+  const convexUrl = env.PUBLIC_CONVEX_URL;
+  if (!convexUrl) {
+    throw new Error("PUBLIC_CONVEX_URL is not set. Set it to your Convex deployment URL.");
+  }
+
   // Single Convex client for the app; the auth bridge below feeds it Clerk tokens.
-  setupConvex(env.PUBLIC_CONVEX_URL);
+  setupConvex(convexUrl);
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
