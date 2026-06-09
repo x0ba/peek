@@ -304,10 +304,10 @@ async function softDeleteSessionReports(ctx: any, sessionId: any, deletedAt: num
     const reports = await ctx.db
       .query("analysisReports")
       .withIndex("by_sessionId", (q: any) => q.eq("sessionId", sessionId))
+      .filter((q: any) => q.eq(q.field("deletedAt"), undefined))
       .take(100);
-    const active = reports.filter((report: any) => !report.deletedAt);
-    if (active.length === 0) break;
-    for (const report of active) await ctx.db.patch(report._id, { deletedAt });
+    if (reports.length === 0) break;
+    for (const report of reports) await ctx.db.patch(report._id, { deletedAt });
   }
 }
 
