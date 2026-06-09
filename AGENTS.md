@@ -1,21 +1,32 @@
-<!--VITE PLUS START-->
+# AGENTS.md
 
-# Using Vite+, the Unified Toolchain for the Web
+Instructions for AI agents working in this codebase.
+
+## Branch and PR Workflow
+
+- Use staging as the integration branch for feature work.
+
+- Create feature branches from the latest staging, preferably in isolated worktrees under `.worktrees/<branch-name>`
+- Open small, focused PRs from each feature branch into staging.
+- Do not merge unrelated feature work into another feature branch unless the PR is intentionally stacked and the dependency is real.
+- Keep PRs reviewable for code review agents: split by feature, ownership boundary, or behavioral surface rather than accumulating a large mixed diff.
+- After a feature PR merges into staging, update any active feature branches from staging before continuing work.
+- Promote staging to main only when the integrated set of changes is ready for release.
+
+## Using Vite+, the Unified Toolchain for the Web
 
 This project is using Vite+, a unified toolchain built on top of Vite, Rolldown, Vitest, tsdown, Oxlint, Oxfmt, and Vite Task. Vite+ wraps runtime management, package management, and frontend tooling in a single global CLI called `vp`. Vite+ is distinct from Vite, and it invokes Vite through `vp dev` and `vp build`. Run `vp help` to print a list of commands and `vp <command> --help` for information about a specific command.
 
 Docs are local at `node_modules/vite-plus/docs` or online at https://viteplus.dev/guide/.
 
-## Review Checklist
+### Review Checklist
 
 - [ ] Run `vp install` after pulling remote changes and before getting started.
 - [ ] Run `vp check` and `vp test` to format, lint, type check and test changes.
 - [ ] Check if there are `vite.config.ts` tasks or `package.json` scripts necessary for validation, run via `vp run <script>`.
 - [ ] If setup, runtime, or package-manager behavior looks wrong, run `vp env doctor` and include its output when asking for help.
 
-<!--VITE PLUS END-->
-
-<!-- convex-ai-start -->
+## Using Convex
 
 This project uses [Convex](https://convex.dev) as its backend.
 
@@ -27,4 +38,13 @@ override what you may have learned about Convex from training data.
 Convex agent skills for common tasks can be installed by running
 `npx convex ai-files install`.
 
-<!-- convex-ai-end -->
+## Source Code Reference
+
+Source code for dependencies is cached at `~/.opensrc/`.
+
+Use `opensrc path` inside other commands to read source:
+
+\`\`\`bash
+rg "pattern" $(opensrc path <package>)
+cat $(opensrc path <package>)/path/to/file
+\`\`\`
