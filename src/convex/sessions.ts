@@ -348,7 +348,7 @@ export const deleteSession = mutation({
   },
 });
 
-const DELETE_ALL_BATCH_SIZE = 50;
+const DELETE_ALL_BATCH_SIZE = 5;
 
 const deleteAllCursor = v.union(
   v.object({
