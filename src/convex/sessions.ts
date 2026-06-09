@@ -1,5 +1,6 @@
-import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { v, type Infer } from "convex/values";
+import type { Doc, Id } from "./_generated/dataModel";
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { requireUser } from "./users";
 
 const source = v.union(
@@ -130,8 +131,17 @@ const normalizedSessionSummary = v.object({
   dataCompleteness,
 });
 
-function reportSummary(report: any) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function reportSummary(report: Doc<"analysisReports"> | undefined) {
   if (!report || report.deletedAt) return undefined;
+  const reportBody = isRecord(report.report) ? report.report : {};
+  const qualityAssessment = isRecord(reportBody.qualityAssessment)
+    ? reportBody.qualityAssessment
+    : {};
+  const risks = Array.isArray(reportBody.risks) ? reportBody.risks : [];
   return {
     id: report._id,
     jobId: report.jobId,
@@ -140,15 +150,19 @@ function reportSummary(report: any) {
     modelName: report.modelName,
     analysisConfidence: report.analysisConfidence,
     overallScore: report.overallScore,
-    overallLabel: report.report?.qualityAssessment?.overallLabel ?? "good",
-    topRisks: (report.report?.risks ?? []).slice(0, 3).map((risk: any) => ({
-      title: risk.title,
-      severity: risk.severity,
-    })),
+    overallLabel:
+      typeof qualityAssessment.overallLabel === "string" ? qualityAssessment.overallLabel : "good",
+    topRisks: risks.slice(0, 3).map((risk) => {
+      const riskRecord = isRecord(risk) ? risk : {};
+      return {
+        title: typeof riskRecord.title === "string" ? riskRecord.title : "Untitled risk",
+        severity: typeof riskRecord.severity === "string" ? riskRecord.severity : "unknown",
+      };
+    }),
   };
 }
 
-function jobSummary(job: any) {
+function jobSummary(job: Doc<"analysisJobs"> | undefined) {
   if (!job) return undefined;
   return {
     id: job._id,
@@ -164,25 +178,25 @@ function jobSummary(job: any) {
   };
 }
 
-async function latestReport(ctx: any, sessionId: any) {
+async function latestReport(ctx: QueryCtx, sessionId: Id<"sessions">) {
   const reports = await ctx.db
     .query("analysisReports")
-    .withIndex("by_sessionId", (q: any) => q.eq("sessionId", sessionId))
+    .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
     .order("desc")
     .take(10);
-  return reports.find((report: any) => !report.deletedAt);
+  return reports.find((report) => !report.deletedAt);
 }
 
-async function latestJob(ctx: any, sessionId: any) {
+async function latestJob(ctx: QueryCtx, sessionId: Id<"sessions">) {
   const jobs = await ctx.db
     .query("analysisJobs")
-    .withIndex("by_sessionId", (q: any) => q.eq("sessionId", sessionId))
+    .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
     .order("desc")
     .take(1);
   return jobs[0];
 }
 
-async function summary(ctx: any, doc: any) {
+async function summary(ctx: QueryCtx, doc: Doc<"sessions">) {
   return {
     id: doc._id,
     source: doc.source,
@@ -288,20 +302,170 @@ export const getSession = query({
   },
 });
 
+async function deleteSessionJobs(ctx: MutationCtx, sessionId: Id<"sessions">) {
+  while (true) {
+    const jobs = await ctx.db
+      .query("analysisJobs")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
+      .take(100);
+    if (jobs.length === 0) break;
+    for (const job of jobs) await ctx.db.delete(job._id);
+  }
+}
+
+async function softDeleteSessionReports(
+  ctx: MutationCtx,
+  sessionId: Id<"sessions">,
+  deletedAt: number,
+) {
+  while (true) {
+    const reports = await ctx.db
+      .query("analysisReports")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .take(100);
+    if (reports.length === 0) break;
+    for (const report of reports) await ctx.db.patch(report._id, { deletedAt });
+  }
+}
+
+async function softDeleteSession(ctx: MutationCtx, doc: Doc<"sessions">) {
+  const deletedAt = Date.now();
+  await ctx.db.patch(doc._id, { deletedAt });
+  await deleteSessionJobs(ctx, doc._id);
+  await softDeleteSessionReports(ctx, doc._id, deletedAt);
+  if (doc.normalizedTraceFileId) await ctx.storage.delete(doc.normalizedTraceFileId);
+}
+
 export const deleteSession = mutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const doc = await ctx.db.get(args.sessionId);
     if (!doc || doc.userId !== user._id) throw new Error("Session not found.");
-    const deletedAt = Date.now();
-    await ctx.db.patch(args.sessionId, { deletedAt });
-    const reports = await ctx.db
-      .query("analysisReports")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
-      .take(100);
-    for (const report of reports) await ctx.db.patch(report._id, { deletedAt });
-    if (doc.normalizedTraceFileId) await ctx.storage.delete(doc.normalizedTraceFileId);
+    await softDeleteSession(ctx, doc);
     return { deleted: true };
+  },
+});
+
+const DELETE_ALL_BATCH_SIZE = 5;
+
+const deleteAllCursor = v.union(
+  v.object({
+    kind: v.literal("before"),
+    importedAt: v.string(),
+  }),
+  v.object({
+    kind: v.literal("after"),
+    importedAt: v.string(),
+    sessionId: v.id("sessions"),
+  }),
+);
+
+type DeleteAllCursor = Infer<typeof deleteAllCursor>;
+
+async function fetchDeleteAllBatch(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  cursor: DeleteAllCursor | undefined,
+) {
+  if (cursor?.kind === "after") {
+    const cursorDoc = await ctx.db.get(cursor.sessionId);
+    if (!cursorDoc || cursorDoc.userId !== userId || cursorDoc.importedAt !== cursor.importedAt) {
+      throw new Error("Invalid delete cursor.");
+    }
+    const sameTimestamp = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q) =>
+        q
+          .eq("userId", userId)
+          .eq("importedAt", cursor.importedAt)
+          .lt("_creationTime", cursorDoc._creationTime),
+      )
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .order("desc")
+      .take(DELETE_ALL_BATCH_SIZE);
+    if (sameTimestamp.length > 0) return sameTimestamp;
+
+    return await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q) =>
+        q.eq("userId", userId).lt("importedAt", cursor.importedAt),
+      )
+      .order("desc")
+      .take(DELETE_ALL_BATCH_SIZE);
+  }
+
+  if (cursor?.kind === "before") {
+    return await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q) =>
+        q.eq("userId", userId).lt("importedAt", cursor.importedAt),
+      )
+      .order("desc")
+      .take(DELETE_ALL_BATCH_SIZE);
+  }
+
+  return await ctx.db
+    .query("sessions")
+    .withIndex("by_userId_and_importedAt", (q) => q.eq("userId", userId))
+    .order("desc")
+    .take(DELETE_ALL_BATCH_SIZE);
+}
+
+export const deleteAllWorkspaceData = mutation({
+  args: { cursor: v.optional(deleteAllCursor) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const batch = await fetchDeleteAllBatch(ctx, user._id, args.cursor);
+
+    let deletedCount = 0;
+    for (const doc of batch) {
+      if (doc.deletedAt) continue;
+      await softDeleteSession(ctx, doc);
+      deletedCount++;
+    }
+
+    if (batch.length === 0) {
+      return { deletedCount, hasMore: false as const };
+    }
+
+    const last = batch[batch.length - 1];
+    const remainingAtTimestamp = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q) =>
+        q
+          .eq("userId", user._id)
+          .eq("importedAt", last.importedAt)
+          .lt("_creationTime", last._creationTime),
+      )
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .order("desc")
+      .first();
+    if (remainingAtTimestamp) {
+      return {
+        deletedCount,
+        hasMore: true as const,
+        cursor: { kind: "after" as const, importedAt: last.importedAt, sessionId: last._id },
+      };
+    }
+
+    const olderUndeleted = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q) =>
+        q.eq("userId", user._id).lt("importedAt", last.importedAt),
+      )
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .order("desc")
+      .first();
+    if (olderUndeleted) {
+      return {
+        deletedCount,
+        hasMore: true as const,
+        cursor: { kind: "before" as const, importedAt: last.importedAt },
+      };
+    }
+
+    return { deletedCount, hasMore: false as const };
   },
 });

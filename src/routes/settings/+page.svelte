@@ -1,9 +1,19 @@
 <script lang="ts">
   import { KeyRound, ShieldCheck, Trash2, UserRound } from "@lucide/svelte";
+  import { goto } from "$app/navigation";
+  import { useConvexClient } from "convex-svelte";
   import { useClerkContext } from "svelte-clerk";
   import Shell from "$lib/components/app/shell.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog/index.js";
+  import { api } from "$convex/_generated/api";
+  import type { Id } from "$convex/_generated/dataModel";
 
+  const client = useConvexClient();
   const ctx = useClerkContext();
+  let deleteDialogOpen = $state(false);
+  let deleting = $state(false);
+  let deleteError = $state<string | null>(null);
   const name = $derived(ctx.user?.fullName ?? ctx.user?.firstName ?? "Your account");
   const email = $derived(ctx.user?.primaryEmailAddress?.emailAddress ?? "");
   const imageUrl = $derived(ctx.user?.imageUrl ?? "");
@@ -17,6 +27,34 @@
   );
 
   const openProfile = () => ctx.clerk?.openUserProfile();
+
+  function openDeleteDialog() {
+    deleteError = null;
+    deleteDialogOpen = true;
+  }
+
+  async function confirmDeleteAll() {
+    if (deleting) return;
+    deleting = true;
+    deleteError = null;
+    try {
+      let cursor:
+        | { kind: "before"; importedAt: string }
+        | { kind: "after"; importedAt: string; sessionId: Id<"sessions"> }
+        | undefined;
+      while (true) {
+        const result = await client.mutation(api.sessions.deleteAllWorkspaceData, { cursor });
+        if (!result.hasMore) break;
+        cursor = result.cursor;
+      }
+      deleteDialogOpen = false;
+      await goto("/dashboard");
+    } catch (error) {
+      deleteError = error instanceof Error ? error.message : "Failed to delete workspace data.";
+    } finally {
+      deleting = false;
+    }
+  }
 
   const privacy = [
     ["Client-side first", "Secrets are detected and replaced in your browser before anything is uploaded."],
@@ -108,11 +146,36 @@
             <p class="text-sm font-medium">Delete all workspace data</p>
             <p class="mt-0.5 text-xs text-muted-foreground">Permanently remove sessions, trace files, jobs, and reports.</p>
           </div>
-          <button class="ml-auto flex shrink-0 items-center gap-2 rounded-md border border-signal-danger/40 px-3 py-2 text-xs font-medium text-signal-danger hover:bg-signal-danger/10">
+          <button
+            type="button"
+            onclick={openDeleteDialog}
+            class="ml-auto flex shrink-0 items-center gap-2 rounded-md border border-signal-danger/40 px-3 py-2 text-xs font-medium text-signal-danger hover:bg-signal-danger/10"
+          >
             <Trash2 class="size-3.5" />Delete all data
           </button>
         </div>
       </div>
     </section>
   </div>
+
+  <AlertDialog.Root bind:open={deleteDialogOpen}>
+    <AlertDialog.Content>
+      <AlertDialog.Header>
+        <AlertDialog.Title>Delete all workspace data?</AlertDialog.Title>
+        <AlertDialog.Description>
+          This permanently removes every session, trace file, analysis job, and report in your workspace. This action
+          cannot be undone.
+        </AlertDialog.Description>
+        {#if deleteError}
+          <p class="text-xs text-signal-danger">{deleteError}</p>
+        {/if}
+      </AlertDialog.Header>
+      <AlertDialog.Footer>
+        <AlertDialog.Cancel disabled={deleting}>Cancel</AlertDialog.Cancel>
+        <Button variant="destructive" disabled={deleting} onclick={confirmDeleteAll}>
+          {deleting ? "Deleting…" : "Delete all data"}
+        </Button>
+      </AlertDialog.Footer>
+    </AlertDialog.Content>
+  </AlertDialog.Root>
 </Shell>
