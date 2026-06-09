@@ -288,19 +288,34 @@ export const getSession = query({
   },
 });
 
+async function deleteSessionJobs(ctx: any, sessionId: any) {
+  while (true) {
+    const jobs = await ctx.db
+      .query("analysisJobs")
+      .withIndex("by_sessionId", (q: any) => q.eq("sessionId", sessionId))
+      .take(100);
+    if (jobs.length === 0) break;
+    for (const job of jobs) await ctx.db.delete(job._id);
+  }
+}
+
+async function softDeleteSessionReports(ctx: any, sessionId: any, deletedAt: number) {
+  while (true) {
+    const reports = await ctx.db
+      .query("analysisReports")
+      .withIndex("by_sessionId", (q: any) => q.eq("sessionId", sessionId))
+      .take(100);
+    const active = reports.filter((report: any) => !report.deletedAt);
+    if (active.length === 0) break;
+    for (const report of active) await ctx.db.patch(report._id, { deletedAt });
+  }
+}
+
 async function softDeleteSession(ctx: any, doc: any) {
   const deletedAt = Date.now();
   await ctx.db.patch(doc._id, { deletedAt });
-  const jobs = await ctx.db
-    .query("analysisJobs")
-    .withIndex("by_sessionId", (q: any) => q.eq("sessionId", doc._id))
-    .take(100);
-  for (const job of jobs) await ctx.db.delete(job._id);
-  const reports = await ctx.db
-    .query("analysisReports")
-    .withIndex("by_sessionId", (q: any) => q.eq("sessionId", doc._id))
-    .take(100);
-  for (const report of reports) await ctx.db.patch(report._id, { deletedAt });
+  await deleteSessionJobs(ctx, doc._id);
+  await softDeleteSessionReports(ctx, doc._id, deletedAt);
   if (doc.normalizedTraceFileId) await ctx.storage.delete(doc.normalizedTraceFileId);
 }
 
@@ -378,7 +393,7 @@ export const deleteAllWorkspaceData = mutation({
         q.eq("userId", user._id).eq("importedAt", last.importedAt),
       )
       .collect();
-    const remainingAtTimestamp = sameTimestamp.some((doc) => doc._id < last._id);
+    const remainingAtTimestamp = sameTimestamp.some((doc) => !doc.deletedAt && doc._id < last._id);
     if (remainingAtTimestamp) {
       return {
         deletedCount,
