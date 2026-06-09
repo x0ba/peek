@@ -382,7 +382,7 @@ export const deleteAllWorkspaceData = mutation({
       deletedCount++;
     }
 
-    if (batch.length < DELETE_ALL_BATCH_SIZE) {
+    if (batch.length === 0) {
       return { deletedCount, hasMore: false as const };
     }
 
@@ -402,10 +402,21 @@ export const deleteAllWorkspaceData = mutation({
       };
     }
 
-    return {
-      deletedCount,
-      hasMore: true as const,
-      cursor: { kind: "before" as const, importedAt: last.importedAt },
-    };
+    const olderUndeleted = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q) =>
+        q.eq("userId", user._id).lt("importedAt", last.importedAt),
+      )
+      .filter((q: any) => q.eq(q.field("deletedAt"), undefined))
+      .first();
+    if (olderUndeleted) {
+      return {
+        deletedCount,
+        hasMore: true as const,
+        cursor: { kind: "before" as const, importedAt: last.importedAt },
+      };
+    }
+
+    return { deletedCount, hasMore: false as const };
   },
 });
