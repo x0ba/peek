@@ -7,6 +7,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import * as AlertDialog from "$lib/components/ui/alert-dialog/index.js";
   import { api } from "$convex/_generated/api";
+  import type { Id } from "$convex/_generated/dataModel";
 
   const client = useConvexClient();
   const ctx = useClerkContext();
@@ -37,7 +38,10 @@
     deleting = true;
     deleteError = null;
     try {
-      let cursor: string | undefined;
+      let cursor:
+        | { kind: "before"; importedAt: string }
+        | { kind: "after"; importedAt: string; sessionId: Id<"sessions"> }
+        | undefined;
       while (true) {
         const result = await client.mutation(api.sessions.deleteAllWorkspaceData, { cursor });
         if (!result.hasMore) break;

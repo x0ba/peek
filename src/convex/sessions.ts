@@ -291,6 +291,11 @@ export const getSession = query({
 async function softDeleteSession(ctx: any, doc: any) {
   const deletedAt = Date.now();
   await ctx.db.patch(doc._id, { deletedAt });
+  const jobs = await ctx.db
+    .query("analysisJobs")
+    .withIndex("by_sessionId", (q: any) => q.eq("sessionId", doc._id))
+    .take(100);
+  for (const job of jobs) await ctx.db.delete(job._id);
   const reports = await ctx.db
     .query("analysisReports")
     .withIndex("by_sessionId", (q: any) => q.eq("sessionId", doc._id))
@@ -312,18 +317,48 @@ export const deleteSession = mutation({
 
 const DELETE_ALL_BATCH_SIZE = 50;
 
+const deleteAllCursor = v.union(
+  v.object({
+    kind: v.literal("before"),
+    importedAt: v.string(),
+  }),
+  v.object({
+    kind: v.literal("after"),
+    importedAt: v.string(),
+    sessionId: v.id("sessions"),
+  }),
+);
+
+async function fetchDeleteAllBatch(ctx: any, userId: any, cursor: any) {
+  if (cursor?.kind === "after") {
+    const sameTimestamp = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q: any) =>
+        q.eq("userId", userId).eq("importedAt", cursor.importedAt),
+      )
+      .collect();
+    return sameTimestamp
+      .filter((doc: any) => doc._id < cursor.sessionId)
+      .sort((a: any, b: any) => (a._id > b._id ? -1 : a._id < b._id ? 1 : 0))
+      .slice(0, DELETE_ALL_BATCH_SIZE);
+  }
+
+  return await ctx.db
+    .query("sessions")
+    .withIndex("by_userId_and_importedAt", (q: any) => {
+      const base = q.eq("userId", userId);
+      if (cursor?.kind === "before") return base.lt("importedAt", cursor.importedAt);
+      return base;
+    })
+    .order("desc")
+    .take(DELETE_ALL_BATCH_SIZE);
+}
+
 export const deleteAllWorkspaceData = mutation({
-  args: { cursor: v.optional(v.string()) },
+  args: { cursor: v.optional(deleteAllCursor) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
-    const batch = await ctx.db
-      .query("sessions")
-      .withIndex("by_userId_and_importedAt", (q) => {
-        const base = q.eq("userId", user._id);
-        return args.cursor ? base.lt("importedAt", args.cursor) : base;
-      })
-      .order("desc")
-      .take(DELETE_ALL_BATCH_SIZE);
+    const batch = await fetchDeleteAllBatch(ctx, user._id, args.cursor);
 
     let deletedCount = 0;
     for (const doc of batch) {
@@ -332,12 +367,30 @@ export const deleteAllWorkspaceData = mutation({
       deletedCount++;
     }
 
+    if (batch.length < DELETE_ALL_BATCH_SIZE) {
+      return { deletedCount, hasMore: false as const };
+    }
+
     const last = batch[batch.length - 1];
-    const hasMore = batch.length === DELETE_ALL_BATCH_SIZE;
+    const sameTimestamp = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q) =>
+        q.eq("userId", user._id).eq("importedAt", last.importedAt),
+      )
+      .collect();
+    const remainingAtTimestamp = sameTimestamp.some((doc) => doc._id < last._id);
+    if (remainingAtTimestamp) {
+      return {
+        deletedCount,
+        hasMore: true as const,
+        cursor: { kind: "after" as const, importedAt: last.importedAt, sessionId: last._id },
+      };
+    }
+
     return {
       deletedCount,
-      hasMore,
-      cursor: hasMore && last ? last.importedAt : undefined,
+      hasMore: true as const,
+      cursor: { kind: "before" as const, importedAt: last.importedAt },
     };
   },
 });
