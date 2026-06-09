@@ -288,20 +288,42 @@ export const getSession = query({
   },
 });
 
+async function softDeleteSession(ctx: any, doc: any) {
+  const deletedAt = Date.now();
+  await ctx.db.patch(doc._id, { deletedAt });
+  const reports = await ctx.db
+    .query("analysisReports")
+    .withIndex("by_sessionId", (q: any) => q.eq("sessionId", doc._id))
+    .take(100);
+  for (const report of reports) await ctx.db.patch(report._id, { deletedAt });
+  if (doc.normalizedTraceFileId) await ctx.storage.delete(doc.normalizedTraceFileId);
+}
+
 export const deleteSession = mutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const doc = await ctx.db.get(args.sessionId);
     if (!doc || doc.userId !== user._id) throw new Error("Session not found.");
-    const deletedAt = Date.now();
-    await ctx.db.patch(args.sessionId, { deletedAt });
-    const reports = await ctx.db
-      .query("analysisReports")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
-      .take(100);
-    for (const report of reports) await ctx.db.patch(report._id, { deletedAt });
-    if (doc.normalizedTraceFileId) await ctx.storage.delete(doc.normalizedTraceFileId);
+    await softDeleteSession(ctx, doc);
     return { deleted: true };
+  },
+});
+
+export const deleteAllWorkspaceData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx);
+    const sessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q) => q.eq("userId", user._id))
+      .collect();
+    let deletedCount = 0;
+    for (const doc of sessions) {
+      if (doc.deletedAt) continue;
+      await softDeleteSession(ctx, doc);
+      deletedCount++;
+    }
+    return { deletedCount };
   },
 });
