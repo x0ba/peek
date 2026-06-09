@@ -371,19 +371,21 @@ async function fetchDeleteAllBatch(
 ) {
   if (cursor?.kind === "after") {
     const cursorDoc = await ctx.db.get(cursor.sessionId);
-    if (cursorDoc) {
-      const sameTimestamp = await ctx.db
-        .query("sessions")
-        .withIndex("by_userId_and_importedAt", (q) =>
-          q
-            .eq("userId", userId)
-            .eq("importedAt", cursor.importedAt)
-            .lt("_creationTime", cursorDoc._creationTime),
-        )
-        .order("desc")
-        .take(DELETE_ALL_BATCH_SIZE);
-      if (sameTimestamp.length > 0) return sameTimestamp;
+    if (!cursorDoc || cursorDoc.userId !== userId || cursorDoc.importedAt !== cursor.importedAt) {
+      throw new Error("Invalid delete cursor.");
     }
+    const sameTimestamp = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId_and_importedAt", (q) =>
+        q
+          .eq("userId", userId)
+          .eq("importedAt", cursor.importedAt)
+          .lt("_creationTime", cursorDoc._creationTime),
+      )
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .order("desc")
+      .take(DELETE_ALL_BATCH_SIZE);
+    if (sameTimestamp.length > 0) return sameTimestamp;
 
     return await ctx.db
       .query("sessions")
