@@ -310,20 +310,34 @@ export const deleteSession = mutation({
   },
 });
 
+const DELETE_ALL_BATCH_SIZE = 50;
+
 export const deleteAllWorkspaceData = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { cursor: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const user = await requireUser(ctx);
-    const sessions = await ctx.db
+    const batch = await ctx.db
       .query("sessions")
-      .withIndex("by_userId_and_importedAt", (q) => q.eq("userId", user._id))
-      .collect();
+      .withIndex("by_userId_and_importedAt", (q) => {
+        const base = q.eq("userId", user._id);
+        return args.cursor ? base.lt("importedAt", args.cursor) : base;
+      })
+      .order("desc")
+      .take(DELETE_ALL_BATCH_SIZE);
+
     let deletedCount = 0;
-    for (const doc of sessions) {
+    for (const doc of batch) {
       if (doc.deletedAt) continue;
       await softDeleteSession(ctx, doc);
       deletedCount++;
     }
-    return { deletedCount };
+
+    const last = batch[batch.length - 1];
+    const hasMore = batch.length === DELETE_ALL_BATCH_SIZE;
+    return {
+      deletedCount,
+      hasMore,
+      cursor: hasMore && last ? last.importedAt : undefined,
+    };
   },
 });

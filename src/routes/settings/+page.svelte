@@ -12,6 +12,7 @@
   const ctx = useClerkContext();
   let deleteDialogOpen = $state(false);
   let deleting = $state(false);
+  let deleteError = $state<string | null>(null);
   const name = $derived(ctx.user?.fullName ?? ctx.user?.firstName ?? "Your account");
   const email = $derived(ctx.user?.primaryEmailAddress?.emailAddress ?? "");
   const imageUrl = $derived(ctx.user?.imageUrl ?? "");
@@ -26,13 +27,26 @@
 
   const openProfile = () => ctx.clerk?.openUserProfile();
 
+  function openDeleteDialog() {
+    deleteError = null;
+    deleteDialogOpen = true;
+  }
+
   async function confirmDeleteAll() {
     if (deleting) return;
     deleting = true;
+    deleteError = null;
     try {
-      await client.mutation(api.sessions.deleteAllWorkspaceData, {});
+      let cursor: string | undefined;
+      while (true) {
+        const result = await client.mutation(api.sessions.deleteAllWorkspaceData, { cursor });
+        if (!result.hasMore) break;
+        cursor = result.cursor;
+      }
       deleteDialogOpen = false;
       await goto("/dashboard");
+    } catch (error) {
+      deleteError = error instanceof Error ? error.message : "Failed to delete workspace data.";
     } finally {
       deleting = false;
     }
@@ -130,7 +144,7 @@
           </div>
           <button
             type="button"
-            onclick={() => (deleteDialogOpen = true)}
+            onclick={openDeleteDialog}
             class="ml-auto flex shrink-0 items-center gap-2 rounded-md border border-signal-danger/40 px-3 py-2 text-xs font-medium text-signal-danger hover:bg-signal-danger/10"
           >
             <Trash2 class="size-3.5" />Delete all data
@@ -148,6 +162,9 @@
           This permanently removes every session, trace file, analysis job, and report in your workspace. This action
           cannot be undone.
         </AlertDialog.Description>
+        {#if deleteError}
+          <p class="text-xs text-signal-danger">{deleteError}</p>
+        {/if}
       </AlertDialog.Header>
       <AlertDialog.Footer>
         <AlertDialog.Cancel disabled={deleting}>Cancel</AlertDialog.Cancel>
