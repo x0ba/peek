@@ -437,6 +437,7 @@ export const deleteAllWorkspaceData = mutation({
           .eq("importedAt", last.importedAt)
           .lt("_creationTime", last._creationTime),
       )
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .order("desc")
       .first();
     if (remainingAtTimestamp) {
@@ -452,6 +453,7 @@ export const deleteAllWorkspaceData = mutation({
       .withIndex("by_userId_and_importedAt", (q) =>
         q.eq("userId", user._id).lt("importedAt", last.importedAt),
       )
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .order("desc")
       .first();
     if (olderUndeleted) {
